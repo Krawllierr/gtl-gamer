@@ -1,4 +1,16 @@
-# GTL Games — Dashboard
+# GTL Games
+
+Repositório do estúdio. Contém o contrato (`CONSTITUICAO.md`), a fila de ideias (`IDEAS.md`) e o painel interno (`dashboard/`).
+
+```
+GTL-Gamer/
+├── CONSTITUICAO.md    contrato interno — fonte única da verdade
+├── IDEAS.md           fila de ideias originais (§9)
+├── Dockerfile         build do dashboard (contexto = raiz)
+└── dashboard/         o app
+```
+
+## O dashboard
 
 Painel interno do estúdio. Implementa a `CONSTITUICAO.md` — não é registro passivo, é a Constituição executável: o banco recusa tarefa sem resultado, o app avisa quando o teto de build estoura, e o veredito aplica o gate de amostra antes dos gates de qualidade.
 
@@ -71,25 +83,26 @@ npm run tipos     # regenera os tipos a partir do schema real
 
 ### 4.1 Subir para o GitHub
 
+O repositório já está iniciado na raiz do `GTL-Gamer`, com dois commits. Falta só apontar para o GitHub:
+
 ```bash
-cd dashboard
-git init
-git add .
-git commit -m "dashboard v1"
-git branch -M main
-git remote add origin git@github.com:SEU-USUARIO/gtl-dashboard.git
+cd /Volumes/KrawllierSSD/Dev/00_ACTIVE/GTL-Gamer
+git remote add origin git@github.com:SEU-USUARIO/gtl-games.git
 git push -u origin main
 ```
 
-O `.gitignore` já exclui `.env` e `node_modules`. **Confira antes do push que o `.env` não está na lista do `git status`.**
+Crie o repositório vazio em github.com/new — **sem** README, `.gitignore` ou licença, senão o primeiro push dá conflito.
+
+Se o SSH falhar, troque para `https://github.com/SEU-USUARIO/gtl-games.git`.
 
 ### 4.2 Criar o serviço
 
 1. Easypanel → **Create Service → App**
 2. **Source:** GitHub → selecione o repositório e a branch `main`
    - Se o repo for privado, use o Deploy Key SSH que o Easypanel gera e cole em *Settings → Deploy keys* no GitHub
-   - Se o dashboard estiver numa subpasta do repo, defina **Build Path** como `/dashboard`
-3. **Build:** método **Dockerfile** (o `Dockerfile` está na raiz do app)
+3. **Build:** método **Dockerfile**
+
+**Importante:** deixe o **Build Path** na raiz (`/`), não em `/dashboard`. O `Dockerfile` fica na raiz de propósito — ele precisa enxergar a `CONSTITUICAO.md`, que é embutida no bundle para aparecer na tela "Regras". Se apontar o contexto para `/dashboard`, o build falha ao copiar a Constituição.
 
 ### 4.3 Variáveis — o passo que quase todo mundo erra
 
@@ -116,7 +129,7 @@ Deploys seguintes: `git push` e o Easypanel reconstrói. O Gustavo nunca atualiz
 ## 5. Estrutura
 
 ```
-src/
+dashboard/src/
 ├── lib/
 │   ├── supabase.ts      cliente + trava de chave secreta
 │   ├── tipos.ts         tipos do banco
@@ -133,7 +146,8 @@ src/
     ├── Projeto.tsx      Definição · Fases · Log · Métricas · Veredito
     ├── MinhasTarefas.tsx
     ├── CheckIn.tsx
-    └── CicloAtual.tsx   capacidade declarada + índice de esforço
+    ├── CicloAtual.tsx   capacidade declarada + índice de esforço
+    └── Constituicao.tsx a CONSTITUICAO.md renderizada dentro do app
 ```
 
 ---
@@ -152,6 +166,7 @@ src/
 | Esforço = realizado ÷ declarado (§3.4) | View `v_esforco_relativo` |
 | Discordância vira registro, não reunião (§3.3) | Campos `notas`/`contestada` + view `v_contestacoes` |
 | Acesso restrito aos sócios (§4.4) | RLS via função `eh_socio()` |
+| Documento não lido é documento morto (§14.3) | Tela "Regras" — a Constituição embutida no build |
 
 O banco recusa antes da interface. Se alguém tentar contornar pelo SQL Editor, as constraints continuam valendo.
 
