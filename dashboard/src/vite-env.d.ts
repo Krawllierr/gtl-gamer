@@ -8,3 +8,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// permite importar a CONSTITUICAO.md como texto
+declare module '*.md?raw' {
+  const conteudo: string
+  export default conteudo
+}

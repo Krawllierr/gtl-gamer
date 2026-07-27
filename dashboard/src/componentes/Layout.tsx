@@ -6,6 +6,7 @@ const ABAS = [
   { para: '/tarefas', rotulo: 'Tarefas', icone: '☑' },
   { para: '/checkin', rotulo: 'Check-in', icone: '＋' },
   { para: '/ciclo', rotulo: 'Ciclo', icone: '◷' },
+  { para: '/constituicao', rotulo: 'Regras', icone: '§' },
 ]
 
 export default function Layout() {

@@ -6,5 +6,9 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true, // permite abrir pelo IP na rede local (útil para testar no celular)
+    fs: {
+      // a CONSTITUICAO.md fica na raiz do repositório, um nível acima do app
+      allow: ['..'],
+    },
   },
 })

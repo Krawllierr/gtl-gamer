@@ -8,6 +8,7 @@ import NovoProjeto from './paginas/NovoProjeto'
 import MinhasTarefas from './paginas/MinhasTarefas'
 import CheckIn from './paginas/CheckIn'
 import CicloAtual from './paginas/CicloAtual'
+import Constituicao from './paginas/Constituicao'
 import { Botao, Carregando, Erro } from './componentes/ui'
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="tarefas" element={<MinhasTarefas />} />
         <Route path="checkin" element={<CheckIn />} />
         <Route path="ciclo" element={<CicloAtual />} />
+        <Route path="constituicao" element={<Constituicao />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
