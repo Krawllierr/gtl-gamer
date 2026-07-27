@@ -21,7 +21,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <form onSubmit={entrar} className="w-full max-w-sm space-y-4">
         <div className="mb-8 text-center">
-          <div className="text-xl font-semibold tracking-wide">GTL GAMES</div>
+          <div className="text-xl font-semibold tracking-wide">GTL GAMER</div>
           <div className="mt-1 text-sm text-suave">Painel interno</div>
         </div>
 

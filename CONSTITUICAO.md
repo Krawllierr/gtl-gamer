@@ -1,4 +1,4 @@
-# CONSTITUIÇÃO DO GTL GAMES
+# CONSTITUIÇÃO DO GTL GAMER
 
 **Arquivo Rei — fonte única da verdade e contrato interno do grupo.**
 
@@ -11,8 +11,8 @@
 | Base | Estados Unidos |
 | Plataforma inicial | Roblox |
 | Público-alvo | Infantil e jovem |
-| Estúdio | **GTL Games** |
-| Dashboard | Supabase — projeto `GTL Games` |
+| Estúdio | **GTL Gamer** |
+| Dashboard | Supabase — projeto `GTL Gamer` |
 
 > **Regra zero:** se algo neste documento conflitar com uma conversa, um Discord, uma memória ou uma decisão informal — **este documento vence**. Se a realidade provar que o documento está errado, o documento é emendado (§14), não ignorado.
 
@@ -246,7 +246,7 @@ Se alguém ficar abaixo da cota por **3 ciclos seguidos**, isso não vira cobran
 
 ### 4.1 Propriedade
 
-Todos os jogos pertencem a um **Roblox Group** (GTL Games), nunca a uma conta pessoal.
+Todos os jogos pertencem a um **Roblox Group** (GTL Gamer), nunca a uma conta pessoal.
 
 Razão: DevEx é por conta individual. Group com payouts configurados torna a divisão explícita e auditável dentro da própria plataforma — e é o que um comprador vai querer ver num exit (§11.5).
 
@@ -265,7 +265,7 @@ A porcentagem final será definida com dados reais dos primeiros ciclos, usando 
 
 ### 4.3 O Dashboard
 
-**Stack:** Supabase (banco) + web app. Projeto `GTL Games`.
+**Stack:** Supabase (banco) + web app. Projeto `GTL Gamer`.
 
 **Princípio de design:**
 
@@ -333,7 +333,7 @@ Se ele só guardar o que digitamos, é uma planilha cara. O valor está em **emp
 - [x] Ambos 18+ com documento
 - [x] Capacidade de pagar Roblox Premium ($13,99/mês)
 - [x] PC capaz de rodar Studio + ferramentas de IA
-- [x] Nome do estúdio: **GTL Games**
+- [x] Nome do estúdio: **GTL Gamer**
 - [x] Projeto Supabase criado
 - [ ] Roblox Group criado
 - [ ] Premium ativo na conta DevEx
@@ -605,7 +605,7 @@ Mantido no dashboard (tabela `projetos` + `veredictos`). Nenhum projeto é encer
 
 ### 11.5 Exit / aquisição
 
-Existe mercado para venda de experiências Roblox — brokers e estúdios compram. Isso é um objetivo declarado do GTL Games.
+Existe mercado para venda de experiências Roblox — brokers e estúdios compram. Isso é um objetivo declarado do GTL Gamer.
 
 **Pendente de verificação (P7):** o que os ToS atuais da Roblox permitem em transferência de experiência ou de Group. Venda de *conta* é proibida; a linha entre as duas coisas precisa ser confirmada antes de qualquer negociação.
 
@@ -628,7 +628,7 @@ Existe mercado para venda de experiências Roblox — brokers e estúdios compra
 
 | # | Quem | Ação |
 |---|---|---|
-| 1 | Gustavo | Criar o Roblox Group **GTL Games** com ambos dentro |
+| 1 | Gustavo | Criar o Roblox Group **GTL Gamer** com ambos dentro |
 | 2 | Gustavo | Ativar Roblox Premium e **iniciar verificação de identidade** (demora — começa já) |
 | 3 | Gabriel | Instalar Studio e **publicar um jogo trivial ponta a ponta**, com uma compra real testada |
 | 4 | Gabriel | Rotacionar a chave `service_role` do Supabase |
@@ -649,7 +649,7 @@ Projeto #01 — Fase 1 (definição, teto de 1 dia) e início da Fase 2.
 
 | # | Decisão | Prazo | Default |
 |---|---|---|---|
-| ~~P1~~ | ~~Nome do estúdio~~ | ✅ | **GTL Games** |
+| ~~P1~~ | ~~Nome do estúdio~~ | ✅ | **GTL Gamer** |
 | ~~P2~~ | ~~Orçamento de anúncios~~ | ✅ | **$50/mês** |
 | P3 | **Divisão de receita** | 1º saque ou 2026-10-25 | **50/50** |
 | P4 | Ferramentas de IA e custo mensal | Antes da Fase 2 do #01 | Apenas gratuitas |
@@ -690,7 +690,7 @@ Documento não lido é documento morto.
 | Versão | Data | Mudança |
 |---|---|---|
 | 1.0 | 2026-07-27 | Criação. Tese, economia, papéis, governança, pipeline, gates, regras de IA, anti-loop |
-| **1.1** | 2026-07-27 | Nome GTL Games. Público infantil fechado e alavanca 18+ removida (§2.4). Conformidade infantil (§2.6). **Gate de amostra mínima** (§6.1). Divisão de trabalho equilibrada + 4 mecanismos de justiça (§3). Gustavo promovido a Growth. Orçamento de $50/mês. Dashboard Supabase + loop de operação (§4.3). Segurança de chaves (§4.4). Estrutura de recebimento e linha do tempo desacoplada (§5.5). Piso técnico (§7.4). Exceção do §10.3. Exit (§11.5). Ciclo de 7 dias. **§16 Backlog de Recalibração** |
+| **1.1** | 2026-07-27 | Nome GTL Gamer. Público infantil fechado e alavanca 18+ removida (§2.4). Conformidade infantil (§2.6). **Gate de amostra mínima** (§6.1). Divisão de trabalho equilibrada + 4 mecanismos de justiça (§3). Gustavo promovido a Growth. Orçamento de $50/mês. Dashboard Supabase + loop de operação (§4.3). Segurança de chaves (§4.4). Estrutura de recebimento e linha do tempo desacoplada (§5.5). Piso técnico (§7.4). Exceção do §10.3. Exit (§11.5). Ciclo de 7 dias. **§16 Backlog de Recalibração** |
 
 ---
 

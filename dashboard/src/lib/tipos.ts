@@ -1,4 +1,4 @@
-// Tipos do banco (GTL Games).
+// Tipos do banco (GTL Gamer).
 // Versão enxuta e legível. Para regenerar a versão completa a partir do schema real:
 //   npm run tipos
 

@@ -1,4 +1,4 @@
-# GTL Games
+# GTL Gamer
 
 Repositório do estúdio. Contém o contrato (`CONSTITUICAO.md`), a fila de ideias (`IDEAS.md`) e o painel interno (`dashboard/`).
 

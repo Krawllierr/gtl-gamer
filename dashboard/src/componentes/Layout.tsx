@@ -17,7 +17,7 @@ export default function Layout() {
       <header className="sticky top-0 z-10 border-b border-borda bg-fundo/90 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <div>
-            <div className="text-sm font-semibold tracking-wide">GTL GAMES</div>
+            <div className="text-sm font-semibold tracking-wide">GTL GAMER</div>
             <div className="text-xs text-suave">
               {perfil?.nome} · {perfil?.titulo}
             </div>

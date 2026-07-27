@@ -25,7 +25,7 @@ export default function Constituicao() {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-borda bg-painel p-4">
-        <div className="text-sm font-medium">Constituição do GTL Games</div>
+        <div className="text-sm font-medium">Constituição do GTL Gamer</div>
         <p className="mt-1 text-xs text-suave">
           Contrato interno. Se algo aqui conflitar com uma conversa, o documento vence. Discordou de alguma coisa?
           Registre em Tarefas → Contestar. Discordância vira registro, não reunião (§3.3).
