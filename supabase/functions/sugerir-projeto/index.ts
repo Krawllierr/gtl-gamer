@@ -17,8 +17,8 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-// Modelo barato e rápido, bom em saída estruturada. Trocável sem mexer no código.
-const MODELO = Deno.env.get('OPENROUTER_MODEL') ?? 'google/gemini-2.5-flash'
+// Trocável pelo secret OPENROUTER_MODEL, sem mexer no código.
+const MODELO = Deno.env.get('OPENROUTER_MODEL') ?? 'openai/gpt-4o'
 
 // As regras da Constituição que a sugestão precisa respeitar. Se este texto
 // divergir da CONSTITUICAO.md, a Constituição vence (Regra zero) — atualizar aqui.

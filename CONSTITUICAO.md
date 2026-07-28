@@ -713,6 +713,7 @@ Documento não lido é documento morto.
 | R10 | Público 18+ | Só se o infantil provar teto baixo | §2.4 |
 | R11 | Canal de distribuição (TikTok/Shorts) | Após 2 ciclos de vídeo | Se não performar: aprender, terceirizar ou trocar de canal |
 | R12 | Módulo de exit / due diligence pack | Ao receber a primeira oferta real | §11.5 |
+| R13 | **`CLAUDE.md`** — briefing de contexto para IA | Após o projeto #01 na Fase 5 | Foi escrito antes do primeiro jogo publicado; a parte de produção é teórica até a prática corrigir |
 
 ---
 
