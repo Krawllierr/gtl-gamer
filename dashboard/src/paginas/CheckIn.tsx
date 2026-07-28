@@ -1,7 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSessao } from '../hooks/useSessao'
+import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
+import { DEMO_CICLO_ATIVO, DEMO_PROJETOS, DEMO_SESSOES } from '../demo/fixtures'
 import type { Ciclo, Projeto, Sessao } from '../lib/tipos'
+import DicaDemo from '../componentes/DicaDemo'
 import { Area, Botao, Campo, Cartao, Erro, Etiqueta } from '../componentes/ui'
 import { data, horas, hoje } from '../lib/formato'
 
@@ -11,6 +14,7 @@ import { data, horas, hoje } from '../lib/formato'
 
 export default function CheckIn() {
   const { perfil } = useSessao()
+  const { ativo: demo } = useDemo()
   const [projetos, setProjetos] = useState<Projeto[]>([])
   const [ciclo, setCiclo] = useState<Ciclo | null>(null)
   const [recentes, setRecentes] = useState<Sessao[]>([])
@@ -26,6 +30,12 @@ export default function CheckIn() {
 
   async function carregar() {
     if (!perfil) return
+    if (demo) {
+      setProjetos(DEMO_PROJETOS.filter((p) => p.ativo))
+      setCiclo(DEMO_CICLO_ATIVO)
+      setRecentes(DEMO_SESSOES)
+      return
+    }
     const [p, c, s] = await Promise.all([
       supabase.from('projetos').select('*').eq('ativo', true).order('codigo'),
       supabase.from('ciclos').select('*').eq('status', 'ativo').maybeSingle(),
@@ -43,11 +53,16 @@ export default function CheckIn() {
 
   useEffect(() => {
     carregar()
-  }, [perfil])
+  }, [perfil, demo])
 
   async function registrar(e: FormEvent) {
     e.preventDefault()
     if (!perfil) return
+    if (demo) {
+      setErro(MSG_DEMO_BLOQUEIO)
+      setOk(false)
+      return
+    }
     setOcupado(true)
     setErro(null)
     setOk(false)
@@ -81,6 +96,8 @@ export default function CheckIn() {
 
   return (
     <div className="space-y-4">
+      <DicaDemo id="checkin" />
+
       {ciclo && (
         <div className="flex items-center justify-between text-xs text-suave">
           <span>
@@ -96,7 +113,8 @@ export default function CheckIn() {
           <select
             value={projetoId}
             onChange={(e) => setProjetoId(e.target.value)}
-            className="w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento"
+            disabled={demo}
+            className="w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento disabled:opacity-50"
           >
             <option value="">Sem projeto (trabalho de estúdio)</option>
             {projetos.map((p) => (
@@ -116,6 +134,7 @@ export default function CheckIn() {
           value={duracao}
           onChange={(e) => setDuracao(e.target.value)}
           required
+          disabled={demo}
         />
 
         <Area
@@ -125,10 +144,22 @@ export default function CheckIn() {
           value={entrega}
           onChange={(e) => setEntrega(e.target.value)}
           required
+          disabled={demo}
         />
 
-        <Area rotulo="Bloqueios (opcional)" rows={2} value={bloqueios} onChange={(e) => setBloqueios(e.target.value)} />
-        <Campo rotulo="Próxima ação (opcional)" value={proxima} onChange={(e) => setProxima(e.target.value)} />
+        <Area
+          rotulo="Bloqueios (opcional)"
+          rows={2}
+          value={bloqueios}
+          onChange={(e) => setBloqueios(e.target.value)}
+          disabled={demo}
+        />
+        <Campo
+          rotulo="Próxima ação (opcional)"
+          value={proxima}
+          onChange={(e) => setProxima(e.target.value)}
+          disabled={demo}
+        />
 
         {erro && <Erro>{erro}</Erro>}
         {ok && (
@@ -137,8 +168,8 @@ export default function CheckIn() {
           </div>
         )}
 
-        <Botao type="submit" disabled={ocupado || entrega.trim().length < 10} className="w-full">
-          {ocupado ? 'Registrando…' : 'Registrar sessão'}
+        <Botao type="submit" disabled={demo || ocupado || entrega.trim().length < 10} className="w-full">
+          {demo ? 'Bloqueado no Demo' : ocupado ? 'Registrando…' : 'Registrar sessão'}
         </Botao>
       </form>
 

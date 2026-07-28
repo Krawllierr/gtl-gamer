@@ -1,19 +1,31 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSessao } from '../hooks/useSessao'
+import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
+import { DEMO_CICLO_ATIVO, DEMO_ESFORCO, DEMO_PERFIS } from '../demo/fixtures'
 import type { Ciclo, EsforcoRelativo, Perfil } from '../lib/tipos'
-import { Botao, Campo, Cartao, Carregando, Etiqueta, Vazio } from '../componentes/ui'
+import DicaDemo from '../componentes/DicaDemo'
+import { Botao, Campo, Cartao, Carregando, Erro, Etiqueta, Vazio } from '../componentes/ui'
 import { data } from '../lib/formato'
 
 export default function CicloAtual() {
   const { perfil } = useSessao()
+  const { ativo: demo } = useDemo()
   const [ciclo, setCiclo] = useState<Ciclo | null>(null)
   const [esforco, setEsforco] = useState<EsforcoRelativo[]>([])
   const [perfis, setPerfis] = useState<Perfil[]>([])
   const [carregando, setCarregando] = useState(true)
   const [horasDecl, setHorasDecl] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
 
   async function carregar() {
+    if (demo) {
+      setCiclo(DEMO_CICLO_ATIVO)
+      setEsforco(DEMO_ESFORCO)
+      setPerfis(DEMO_PERFIS)
+      setCarregando(false)
+      return
+    }
     const { data: c } = await supabase.from('ciclos').select('*').eq('status', 'ativo').maybeSingle()
     setCiclo(c as Ciclo | null)
     if (c) {
@@ -23,16 +35,25 @@ export default function CicloAtual() {
       ])
       setEsforco((e.data ?? []) as EsforcoRelativo[])
       setPerfis((p.data ?? []) as Perfil[])
+    } else {
+      setEsforco([])
+      setPerfis([])
     }
     setCarregando(false)
   }
 
   useEffect(() => {
+    setCarregando(true)
     carregar()
-  }, [])
+  }, [demo])
 
   async function declarar() {
+    if (demo) {
+      setErro(MSG_DEMO_BLOQUEIO)
+      return
+    }
     if (!ciclo || !perfil) return
+    setErro(null)
     await supabase
       .from('capacidade_declarada')
       .upsert(
@@ -46,10 +67,14 @@ export default function CicloAtual() {
   if (carregando) return <Carregando />
   if (!ciclo) return <Vazio>Nenhum ciclo ativo.</Vazio>
 
-  const meuPerfil = perfis.find((p) => p.id === perfil?.id)
+  const meuPerfil =
+    perfis.find((p) => p.id === perfil?.id) ??
+    (demo ? DEMO_PERFIS.find((p) => p.nome === perfil?.nome) : undefined)
 
   return (
     <div className="space-y-4">
+      <DicaDemo id="ciclo" />
+
       <Cartao>
         <div className="flex items-center justify-between">
           <span className="font-medium">Ciclo {ciclo.numero}</span>
@@ -77,12 +102,18 @@ export default function CicloAtual() {
               inputMode="numeric"
               value={horasDecl}
               onChange={(e) => setHorasDecl(e.target.value)}
+              disabled={demo}
             />
           </div>
-          <Botao disabled={!horasDecl} onClick={declarar}>
+          <Botao disabled={!horasDecl || demo} onClick={declarar}>
             Declarar
           </Botao>
         </div>
+        {erro && (
+          <div className="mt-2">
+            <Erro>{erro}</Erro>
+          </div>
+        )}
       </Cartao>
 
       <h2 className="pt-2 text-sm font-medium text-suave">Índice de esforço relativo</h2>

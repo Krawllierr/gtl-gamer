@@ -525,6 +525,7 @@ São conceitos, não sintaxe. Algumas horas, não um curso. O resto se aprende c
 - Comentar **por que**, não o que
 - Testar cada sistema isolado antes de integrar
 - Nunca colar código de IA sem entender o que ele faz com **dinheiro ou dados salvos**
+- **Moeda e locale: o estúdio opera nos EUA, em dólar.** Nunca formatar valor, data ou número com locale `pt-BR` ou símbolo `R$` no dashboard. Robux é unidade própria, não moeda — conversão para dinheiro real é sempre USD (`$`), via `TAXA_DEVEX` (§2.1) e a função `usd()` de `formato.ts`. Usar `toLocaleString('en-US')` (ou equivalente) em qualquer número exibido
 
 ---
 

@@ -1,18 +1,28 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useDemo } from '../hooks/useDemo'
+import { DEMO_PORTFOLIO, DEMO_STATUS } from '../demo/fixtures'
 import type { Portfolio as TPortfolio, ProjetoStatus } from '../lib/tipos'
+import DicaDemo from '../componentes/DicaDemo'
 import { Cartao, Carregando, Etiqueta, Vazio } from '../componentes/ui'
 import { NOME_FASE, NOME_STATUS, ROBUX_M0, data, usd } from '../lib/formato'
 
 export default function Portfolio() {
   const nav = useNavigate()
+  const { ativo: demo } = useDemo()
   const [resumo, setResumo] = useState<TPortfolio | null>(null)
   const [projetos, setProjetos] = useState<ProjetoStatus[]>([])
   const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
     ;(async () => {
+      if (demo) {
+        setResumo(DEMO_PORTFOLIO)
+        setProjetos(DEMO_STATUS)
+        setCarregando(false)
+        return
+      }
       const [r, p] = await Promise.all([
         supabase.from('v_portfolio').select('*').maybeSingle(),
         supabase.from('v_projetos_status').select('*').order('codigo'),
@@ -21,7 +31,7 @@ export default function Portfolio() {
       setProjetos((p.data ?? []) as ProjetoStatus[])
       setCarregando(false)
     })()
-  }, [])
+  }, [demo])
 
   if (carregando) return <Carregando />
 
@@ -30,12 +40,14 @@ export default function Portfolio() {
 
   return (
     <div className="space-y-4">
+      <DicaDemo id="portfolio" />
+
       {/* Progresso até o primeiro saque — Constituição §2.3 */}
       <Cartao>
         <div className="flex items-baseline justify-between">
           <span className="text-sm text-suave">M0 · Primeiro saque</span>
           <span className="text-sm font-semibold">
-            {(resumo?.robux_acumulado ?? 0).toLocaleString('pt-BR')} / {ROBUX_M0.toLocaleString('pt-BR')} R$
+            {(resumo?.robux_acumulado ?? 0).toLocaleString('en-US')} / {ROBUX_M0.toLocaleString('en-US')} Robux
           </span>
         </div>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
@@ -43,7 +55,7 @@ export default function Portfolio() {
         </div>
         <div className="mt-2 flex justify-between text-xs text-suave">
           <span>≈ {usd(resumo?.robux_acumulado ?? 0)} em DevEx</span>
-          <span>faltam {(resumo?.robux_faltando_m0 ?? ROBUX_M0).toLocaleString('pt-BR')}</span>
+          <span>faltam {(resumo?.robux_faltando_m0 ?? ROBUX_M0).toLocaleString('en-US')}</span>
         </div>
       </Cartao>
 

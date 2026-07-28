@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSessao } from '../hooks/useSessao'
+import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
+import { DEMO_TAREFAS, demoPerfilIdPorNome } from '../demo/fixtures'
 import type { Tarefa } from '../lib/tipos'
+import DicaDemo from '../componentes/DicaDemo'
 import { Area, Botao, Cartao, Carregando, Erro, Etiqueta, Vazio } from '../componentes/ui'
 import { COR_PRIORIDADE, data, hoje } from '../lib/formato'
 
 export default function MinhasTarefas() {
   const { perfil } = useSessao()
+  const { ativo: demo } = useDemo()
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [carregando, setCarregando] = useState(true)
   const [aberta, setAberta] = useState<string | null>(null)
@@ -14,6 +18,14 @@ export default function MinhasTarefas() {
 
   async function carregar() {
     if (!perfil) return
+    if (demo) {
+      const meuId = demoPerfilIdPorNome(perfil.nome)
+      let lista = DEMO_TAREFAS
+      if (!todas) lista = lista.filter((t) => t.responsavel_id === meuId)
+      setTarefas(lista)
+      setCarregando(false)
+      return
+    }
     let q = supabase.from('tarefas').select('*').order('prazo', { nullsFirst: false })
     if (!todas) q = q.eq('responsavel_id', perfil.id)
     const { data } = await q
@@ -22,8 +34,9 @@ export default function MinhasTarefas() {
   }
 
   useEffect(() => {
+    setCarregando(true)
     carregar()
-  }, [perfil, todas])
+  }, [perfil, todas, demo])
 
   if (carregando) return <Carregando />
 
@@ -32,6 +45,8 @@ export default function MinhasTarefas() {
 
   return (
     <div className="space-y-4">
+      <DicaDemo id="tarefas" />
+
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-suave">
           {todas ? 'Todas as tarefas' : 'Minhas tarefas'} · {abertas.length} abertas
@@ -52,6 +67,7 @@ export default function MinhasTarefas() {
               aberta={aberta === t.id}
               abrir={() => setAberta(aberta === t.id ? null : t.id)}
               recarregar={carregar}
+              demo={demo}
             />
           ))}
         </div>
@@ -79,11 +95,13 @@ function CartaoTarefa({
   aberta,
   abrir,
   recarregar,
+  demo,
 }: {
   t: Tarefa
   aberta: boolean
   abrir: () => void
   recarregar: () => void
+  demo: boolean
 }) {
   const [resultado, setResultado] = useState(t.resultado ?? '')
   const [notas, setNotas] = useState(t.notas ?? '')
@@ -93,6 +111,10 @@ function CartaoTarefa({
   const atrasada = t.prazo && t.prazo < hoje() && t.status !== 'concluida'
 
   async function salvar(campos: Partial<Tarefa>) {
+    if (demo) {
+      setErro(MSG_DEMO_BLOQUEIO)
+      return
+    }
     setOcupado(true)
     setErro(null)
     const { error } = await supabase.from('tarefas').update(campos).eq('id', t.id)
@@ -115,7 +137,9 @@ function CartaoTarefa({
               {data(t.prazo)}
             </span>
           )}
-          {t.contestada && <Etiqueta className="border-amber-500/30 bg-amber-500/10 text-amber-300">contestada</Etiqueta>}
+          {t.contestada && (
+            <Etiqueta className="border-amber-500/30 bg-amber-500/10 text-amber-300">contestada</Etiqueta>
+          )}
           {t.notas && !t.contestada && <span>· tem nota</span>}
         </div>
       </div>
@@ -138,6 +162,7 @@ function CartaoTarefa({
             value={resultado}
             onChange={(e) => setResultado(e.target.value)}
             placeholder="O que ficou pronto, com link/prova quando houver"
+            disabled={demo}
           />
 
           <Area
@@ -146,32 +171,37 @@ function CartaoTarefa({
             rows={2}
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
+            disabled={demo}
           />
 
           {erro && <Erro>{erro}</Erro>}
 
           <div className="flex flex-wrap gap-2">
             <Botao
-              disabled={ocupado || resultado.trim().length < 10}
+              disabled={demo || ocupado || resultado.trim().length < 10}
               onClick={() => salvar({ status: 'concluida', resultado, notas: notas || null })}
             >
               Concluir
             </Botao>
             <Botao
               variante="secundario"
-              disabled={ocupado}
+              disabled={demo || ocupado}
               onClick={() => salvar({ notas: notas || null, resultado: resultado || null })}
             >
               Salvar
             </Botao>
             {t.status === 'pendente' && (
-              <Botao variante="secundario" disabled={ocupado} onClick={() => salvar({ status: 'em_andamento' })}>
+              <Botao
+                variante="secundario"
+                disabled={demo || ocupado}
+                onClick={() => salvar({ status: 'em_andamento' })}
+              >
                 Começar
               </Botao>
             )}
             <Botao
               variante={t.contestada ? 'secundario' : 'perigo'}
-              disabled={ocupado}
+              disabled={demo || ocupado}
               onClick={() => salvar({ contestada: !t.contestada, notas: notas || null })}
             >
               {t.contestada ? 'Retirar contestação' : 'Contestar'}

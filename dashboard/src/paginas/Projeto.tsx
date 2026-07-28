@@ -2,7 +2,17 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useSessao } from '../hooks/useSessao'
+import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
+import {
+  DEMO_FASES_LOG,
+  DEMO_METRICAS,
+  DEMO_SESSOES,
+  DEMO_VEREDICTOS,
+  demoProjeto,
+  demoStatus,
+} from '../demo/fixtures'
 import type { FaseLog, Metrica, Projeto as TProjeto, ProjetoStatus, Sessao, Veredito } from '../lib/tipos'
+import DicaDemo from '../componentes/DicaDemo'
 import { Area, Botao, Campo, Cartao, Carregando, Erro, Etiqueta, Vazio } from '../componentes/ui'
 import {
   FASES,
@@ -22,6 +32,7 @@ type Aba = 'definicao' | 'fases' | 'log' | 'metricas' | 'veredito'
 
 export default function Projeto() {
   const { id } = useParams<{ id: string }>()
+  const { ativo: demo } = useDemo()
   const [aba, setAba] = useState<Aba>('definicao')
   const [proj, setProj] = useState<TProjeto | null>(null)
   const [status, setStatus] = useState<ProjetoStatus | null>(null)
@@ -29,6 +40,12 @@ export default function Projeto() {
 
   async function carregar() {
     if (!id) return
+    if (demo) {
+      setProj(demoProjeto(id))
+      setStatus(demoStatus(id))
+      setCarregando(false)
+      return
+    }
     const [p, s] = await Promise.all([
       supabase.from('projetos').select('*').eq('id', id).maybeSingle(),
       supabase.from('v_projetos_status').select('*').eq('id', id).maybeSingle(),
@@ -39,8 +56,9 @@ export default function Projeto() {
   }
 
   useEffect(() => {
+    setCarregando(true)
     carregar()
-  }, [id])
+  }, [id, demo])
 
   if (carregando) return <Carregando />
   if (!proj) return <Vazio>Projeto não encontrado.</Vazio>
@@ -55,6 +73,8 @@ export default function Projeto() {
 
   return (
     <div className="space-y-4">
+      <DicaDemo id="projeto" />
+
       <div>
         <div className="flex items-center gap-2">
           <span className="text-lg">{status?.semaforo}</span>
@@ -85,10 +105,10 @@ export default function Projeto() {
       </div>
 
       {aba === 'definicao' && <Definicao p={proj} />}
-      {aba === 'fases' && <Fases p={proj} recarregar={carregar} />}
-      {aba === 'log' && <Log projetoId={proj.id} />}
-      {aba === 'metricas' && <Metricas projetoId={proj.id} recarregar={carregar} />}
-      {aba === 'veredito' && <VeredictoAba p={proj} />}
+      {aba === 'fases' && <Fases p={proj} recarregar={carregar} demo={demo} />}
+      {aba === 'log' && <Log projetoId={proj.id} demo={demo} />}
+      {aba === 'metricas' && <Metricas projetoId={proj.id} recarregar={carregar} demo={demo} />}
+      {aba === 'veredito' && <VeredictoAba p={proj} demo={demo} />}
     </div>
   )
 }
@@ -138,13 +158,17 @@ function Definicao({ p }: { p: TProjeto }) {
 
 /* ---------------- FASES ---------------- */
 
-function Fases({ p, recarregar }: { p: TProjeto; recarregar: () => void }) {
+function Fases({ p, recarregar, demo }: { p: TProjeto; recarregar: () => void; demo: boolean }) {
   const { perfil } = useSessao()
   const [log, setLog] = useState<FaseLog[]>([])
   const [justificativa, setJustificativa] = useState('')
   const [erro, setErro] = useState<string | null>(null)
 
   async function carregar() {
+    if (demo) {
+      setLog(DEMO_FASES_LOG[p.id] ?? [])
+      return
+    }
     const { data } = await supabase
       .from('fases_log')
       .select('*')
@@ -154,7 +178,7 @@ function Fases({ p, recarregar }: { p: TProjeto; recarregar: () => void }) {
   }
   useEffect(() => {
     carregar()
-  }, [p.id])
+  }, [p.id, demo])
 
   const idx = FASES.indexOf(p.fase_atual)
   const proxima = FASES[idx + 1]
@@ -167,6 +191,10 @@ function Fases({ p, recarregar }: { p: TProjeto; recarregar: () => void }) {
 
   async function avancar() {
     if (!proxima) return
+    if (demo) {
+      setErro(MSG_DEMO_BLOQUEIO)
+      return
+    }
     setErro(null)
     if (estourou && justificativa.trim().length < 15) {
       setErro(
@@ -217,11 +245,12 @@ function Fases({ p, recarregar }: { p: TProjeto; recarregar: () => void }) {
                 value={justificativa}
                 onChange={(e) => setJustificativa(e.target.value)}
                 placeholder="Por que estamos avançando mesmo com o teto estourado"
+                disabled={demo}
               />
             )}
             {erro && <Erro>{erro}</Erro>}
-            <Botao onClick={avancar} className="w-full">
-              Avançar para {NOME_FASE[proxima]}
+            <Botao onClick={avancar} disabled={demo} className="w-full">
+              {demo ? 'Bloqueado no Demo' : `Avançar para ${NOME_FASE[proxima]}`}
             </Botao>
           </div>
         ) : (
@@ -250,16 +279,20 @@ function Fases({ p, recarregar }: { p: TProjeto; recarregar: () => void }) {
 
 /* ---------------- LOG ---------------- */
 
-function Log({ projetoId }: { projetoId: string }) {
+function Log({ projetoId, demo }: { projetoId: string; demo: boolean }) {
   const [sessoes, setSessoes] = useState<Sessao[]>([])
   useEffect(() => {
+    if (demo) {
+      setSessoes(DEMO_SESSOES.filter((s) => s.projeto_id === projetoId))
+      return
+    }
     supabase
       .from('sessoes')
       .select('*')
       .eq('projeto_id', projetoId)
       .order('data', { ascending: false })
       .then(({ data }) => setSessoes((data ?? []) as Sessao[]))
-  }, [projetoId])
+  }, [projetoId, demo])
 
   const total = sessoes.reduce((s, x) => s + x.duracao_min, 0)
 
@@ -287,7 +320,15 @@ function Log({ projetoId }: { projetoId: string }) {
 
 /* ---------------- MÉTRICAS ---------------- */
 
-function Metricas({ projetoId, recarregar }: { projetoId: string; recarregar: () => void }) {
+function Metricas({
+  projetoId,
+  recarregar,
+  demo,
+}: {
+  projetoId: string
+  recarregar: () => void
+  demo: boolean
+}) {
   const { perfil } = useSessao()
   const [lista, setLista] = useState<Metrica[]>([])
   const [form, setForm] = useState({
@@ -302,6 +343,10 @@ function Metricas({ projetoId, recarregar }: { projetoId: string; recarregar: ()
   const [erro, setErro] = useState<string | null>(null)
 
   async function carregar() {
+    if (demo) {
+      setLista(DEMO_METRICAS[projetoId] ?? [])
+      return
+    }
     const { data } = await supabase
       .from('metricas')
       .select('*')
@@ -311,12 +356,16 @@ function Metricas({ projetoId, recarregar }: { projetoId: string; recarregar: ()
   }
   useEffect(() => {
     carregar()
-  }, [projetoId])
+  }, [projetoId, demo])
 
   const num = (v: string) => (v.trim() === '' ? null : Number(v))
 
   async function salvar(e: FormEvent) {
     e.preventDefault()
+    if (demo) {
+      setErro(MSG_DEMO_BLOQUEIO)
+      return
+    }
     setErro(null)
     const { error } = await supabase.from('metricas').upsert(
       {
@@ -353,6 +402,7 @@ function Metricas({ projetoId, recarregar }: { projetoId: string; recarregar: ()
               type="date"
               value={form.data}
               onChange={(e) => setForm({ ...form, data: e.target.value })}
+              disabled={demo}
             />
             <Campo
               rotulo={`Visitantes (gate ${GATE_AMOSTRA})`}
@@ -360,6 +410,7 @@ function Metricas({ projetoId, recarregar }: { projetoId: string; recarregar: ()
               inputMode="numeric"
               value={form.visitantes_unicos}
               onChange={(e) => setForm({ ...form, visitantes_unicos: e.target.value })}
+              disabled={demo}
             />
             <Campo
               rotulo={`D1 % (gate ${GATE_D1})`}
@@ -368,6 +419,7 @@ function Metricas({ projetoId, recarregar }: { projetoId: string; recarregar: ()
               inputMode="decimal"
               value={form.d1_retention}
               onChange={(e) => setForm({ ...form, d1_retention: e.target.value })}
+              disabled={demo}
             />
             <Campo
               rotulo={`Sessão min (gate ${GATE_SESSAO})`}
@@ -376,6 +428,7 @@ function Metricas({ projetoId, recarregar }: { projetoId: string; recarregar: ()
               inputMode="decimal"
               value={form.sessao_media_min}
               onChange={(e) => setForm({ ...form, sessao_media_min: e.target.value })}
+              disabled={demo}
             />
             <Campo
               rotulo={`CCU pico (gate ${GATE_CCU})`}
@@ -383,6 +436,7 @@ function Metricas({ projetoId, recarregar }: { projetoId: string; recarregar: ()
               inputMode="numeric"
               value={form.ccu_pico}
               onChange={(e) => setForm({ ...form, ccu_pico: e.target.value })}
+              disabled={demo}
             />
             <Campo
               rotulo="Robux no dia"
@@ -390,11 +444,16 @@ function Metricas({ projetoId, recarregar }: { projetoId: string; recarregar: ()
               inputMode="numeric"
               value={form.robux_dia}
               onChange={(e) => setForm({ ...form, robux_dia: e.target.value })}
+              disabled={demo}
             />
           </div>
-          {erro && <div className="mt-2"><Erro>{erro}</Erro></div>}
-          <Botao type="submit" className="mt-3 w-full">
-            Salvar snapshot
+          {erro && (
+            <div className="mt-2">
+              <Erro>{erro}</Erro>
+            </div>
+          )}
+          <Botao type="submit" disabled={demo} className="mt-3 w-full">
+            {demo ? 'Bloqueado no Demo' : 'Salvar snapshot'}
           </Botao>
         </Cartao>
       </form>
@@ -436,7 +495,7 @@ function Cel({ r, v, gate, sufixo = '' }: { r: string; v: number | null; gate?: 
 
 /* ---------------- VEREDITO ---------------- */
 
-function VeredictoAba({ p }: { p: TProjeto }) {
+function VeredictoAba({ p, demo }: { p: TProjeto; demo: boolean }) {
   const [v, setV] = useState<Veredito | null>(null)
   const [visit, setVisit] = useState('')
   const [d1, setD1] = useState('')
@@ -446,13 +505,17 @@ function VeredictoAba({ p }: { p: TProjeto }) {
   const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
+    if (demo) {
+      setV(DEMO_VEREDICTOS[p.id] ?? null)
+      return
+    }
     supabase
       .from('veredictos')
       .select('*')
       .eq('projeto_id', p.id)
       .maybeSingle()
       .then(({ data }) => setV(data as Veredito | null))
-  }, [p.id])
+  }, [p.id, demo])
 
   if (v) {
     const rot: Record<string, string> = {
@@ -489,6 +552,10 @@ function VeredictoAba({ p }: { p: TProjeto }) {
 
   async function registrar(e: FormEvent) {
     e.preventDefault()
+    if (demo) {
+      setErro(MSG_DEMO_BLOQUEIO)
+      return
+    }
     setErro(null)
     const { error } = await supabase.from('veredictos').insert({
       projeto_id: p.id,
@@ -516,10 +583,37 @@ function VeredictoAba({ p }: { p: TProjeto }) {
       <Cartao>
         <div className="mb-3 text-sm font-medium">Registrar veredito</div>
         <div className="grid grid-cols-2 gap-2">
-          <Campo rotulo="Visitantes na janela" type="number" value={visit} onChange={(e) => setVisit(e.target.value)} required />
-          <Campo rotulo="D1 %" type="number" step="0.1" value={d1} onChange={(e) => setD1(e.target.value)} />
-          <Campo rotulo="Sessão média (min)" type="number" step="0.1" value={ses} onChange={(e) => setSes(e.target.value)} />
-          <Campo rotulo="CCU pico" type="number" value={ccu} onChange={(e) => setCcu(e.target.value)} />
+          <Campo
+            rotulo="Visitantes na janela"
+            type="number"
+            value={visit}
+            onChange={(e) => setVisit(e.target.value)}
+            required
+            disabled={demo}
+          />
+          <Campo
+            rotulo="D1 %"
+            type="number"
+            step="0.1"
+            value={d1}
+            onChange={(e) => setD1(e.target.value)}
+            disabled={demo}
+          />
+          <Campo
+            rotulo="Sessão média (min)"
+            type="number"
+            step="0.1"
+            value={ses}
+            onChange={(e) => setSes(e.target.value)}
+            disabled={demo}
+          />
+          <Campo
+            rotulo="CCU pico"
+            type="number"
+            value={ccu}
+            onChange={(e) => setCcu(e.target.value)}
+            disabled={demo}
+          />
         </div>
       </Cartao>
 
@@ -547,12 +641,13 @@ function VeredictoAba({ p }: { p: TProjeto }) {
         value={pm}
         onChange={(e) => setPm(e.target.value)}
         required
+        disabled={demo}
       />
 
       {erro && <Erro>{erro}</Erro>}
 
-      <Botao type="submit" disabled={pm.trim().length < 30} className="w-full">
-        Registrar veredito
+      <Botao type="submit" disabled={demo || pm.trim().length < 30} className="w-full">
+        {demo ? 'Bloqueado no Demo' : 'Registrar veredito'}
       </Botao>
     </form>
   )

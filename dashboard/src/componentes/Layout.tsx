@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useSessao } from '../hooks/useSessao'
+import { useDemo } from '../hooks/useDemo'
 
 const ABAS = [
   { para: '/', rotulo: 'Portfólio', icone: '◍' },
@@ -11,6 +12,7 @@ const ABAS = [
 
 export default function Layout() {
   const { perfil, sair } = useSessao()
+  const { ativo: demo, alternar } = useDemo()
 
   return (
     <div className="mx-auto min-h-screen max-w-3xl pb-24">
@@ -22,10 +24,29 @@ export default function Layout() {
               {perfil?.nome} · {perfil?.titulo}
             </div>
           </div>
-          <button onClick={sair} className="text-xs text-suave hover:text-texto">
-            Sair
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={alternar}
+              aria-pressed={demo}
+              className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                demo
+                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-200'
+                  : 'border-borda bg-white/5 text-suave hover:text-texto'
+              }`}
+            >
+              Demo {demo ? 'ON' : 'OFF'}
+            </button>
+            <button onClick={sair} className="text-xs text-suave hover:text-texto">
+              Sair
+            </button>
+          </div>
         </div>
+        {demo && (
+          <div className="border-t border-amber-500/30 bg-amber-500/15 px-4 py-2 text-center text-xs font-medium text-amber-100">
+            DEMO — dados fictícios. Nada aqui é Robux real.
+          </div>
+        )}
       </header>
 
       <main className="px-4 py-4">
