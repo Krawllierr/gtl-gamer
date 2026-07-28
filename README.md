@@ -126,9 +126,42 @@ Deploys seguintes: `git push` e o Easypanel reconstrói. O Gustavo nunca atualiz
 
 ---
 
+## 4.5 A sugestão de IA no Novo Projeto
+
+No formulário de novo projeto, depois de preencher **nome** e **gênero base**, o botão "Sugerir com IA" rascunha os outros quatro campos (uma frase, core loop, alteração única, monetização) para os dois analisarem antes de criar. Ela **não grava nada** — só preenche a tela.
+
+A chamada vai para a Edge Function `sugerir-projeto`, que fala com o OpenRouter. **A chave nunca passa pelo navegador** (§4.4): se estivesse no `VITE_`, qualquer visitante leria e gastaria os créditos.
+
+**Configurar a chave** (uma vez, no Supabase Dashboard → Edge Functions → Secrets):
+
+```
+OPENROUTER_API_KEY=sk-or-v1-...
+```
+
+Pegue em [openrouter.ai/keys](https://openrouter.ai/keys). Sem esse secret a função responde com um erro claro em vez de quebrar.
+
+**Trocar de modelo** sem mexer no código — adicione outro secret:
+
+```
+OPENROUTER_MODEL=google/gemini-2.0-flash-001
+```
+
+Esse é o default. Custa frações de centavo por sugestão.
+
+Redeploy da função depois de editar `supabase/functions/sugerir-projeto/index.ts`:
+
+```bash
+npx supabase functions deploy sugerir-projeto --project-ref aqkuxvfbpubktbyuoydh
+```
+
+---
+
 ## 5. Estrutura
 
 ```
+supabase/functions/
+└── sugerir-projeto/     IA do formulário — a chave do OpenRouter vive só aqui
+
 dashboard/src/
 ├── lib/
 │   ├── supabase.ts      cliente + trava de chave secreta

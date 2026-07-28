@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
 import { DEMO_PROJETOS } from '../demo/fixtures'
 import DicaDemo from '../componentes/DicaDemo'
-import { Area, Botao, Campo, Cartao, Erro } from '../componentes/ui'
+import { Area, Botao, Campo, Cartao, Erro, LinkAcao } from '../componentes/ui'
 
 export default function NovoProjeto() {
   const nav = useNavigate()
@@ -19,6 +19,8 @@ export default function NovoProjeto() {
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [ativos, setAtivos] = useState(0)
+  const [sugerindo, setSugerindo] = useState(false)
+  const [sugerido, setSugerido] = useState(false)
 
   const passos = loop
     .split('\n')
@@ -39,6 +41,34 @@ export default function NovoProjeto() {
       setAtivos(count ?? 0)
     })()
   }, [demo])
+
+  // A IA preenche para os dois analisarem — ela não decide escopo (§7.2), e a
+  // Fase 1 é consenso obrigatório (§3.3). Nada é gravado até clicar em criar.
+  async function sugerir() {
+    if (demo) {
+      setErro(MSG_DEMO_BLOQUEIO)
+      return
+    }
+    setSugerindo(true)
+    setErro(null)
+
+    const { data, error } = await supabase.functions.invoke('sugerir-projeto', {
+      body: { nome: nome.trim(), genero: genero.trim() },
+    })
+
+    if (error || data?.erro) {
+      setErro(data?.erro ?? `Não deu para gerar a sugestão: ${error?.message}`)
+      setSugerindo(false)
+      return
+    }
+
+    setFrase(data.uma_frase ?? '')
+    setLoop((data.core_loop ?? []).join('\n'))
+    setAlteracao(data.alteracao_unica ?? '')
+    setMonetizacao(data.modelo_monetizacao ?? '')
+    setSugerido(true)
+    setSugerindo(false)
+  }
 
   async function criar(e: FormEvent) {
     e.preventDefault()
@@ -121,6 +151,22 @@ export default function NovoProjeto() {
         onChange={(e) => setGenero(e.target.value)}
         disabled={demo}
       />
+
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-borda bg-white/5 px-3 py-2">
+        <p className="text-xs text-suave">
+          {sugerido
+            ? 'Sugestão preenchida abaixo. Revisem, editem e só então criem — a Fase 1 é consenso (§3.3).'
+            : 'Preencha nome e gênero e a IA rascunha os campos abaixo para vocês analisarem.'}
+        </p>
+        <LinkAcao
+          onClick={sugerir}
+          disabled={sugerindo || demo || !nome.trim() || !genero.trim()}
+          className="shrink-0"
+        >
+          {sugerindo ? 'Pensando…' : sugerido ? 'Gerar de novo' : 'Sugerir com IA'}
+        </LinkAcao>
+      </div>
+
       <Area
         rotulo="Uma frase"
         rows={2}
