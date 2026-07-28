@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDemo } from '../hooks/useDemo'
 import { DEMO_PORTFOLIO, DEMO_STATUS } from '../demo/fixtures'
 import type { Portfolio as TPortfolio, ProjetoStatus } from '../lib/tipos'
 import DicaDemo from '../componentes/DicaDemo'
-import { Cartao, Carregando, Etiqueta, Vazio } from '../componentes/ui'
-import { NOME_FASE, NOME_STATUS, ROBUX_M0, data, usd } from '../lib/formato'
+import { Cartao, Carregando, Etiqueta, LinkAcao, Vazio } from '../componentes/ui'
+import {
+  GATE_AMOSTRA,
+  GATE_CCU,
+  GATE_D1,
+  GATE_SESSAO,
+  NOME_FASE,
+  NOME_STATUS,
+  ROBUX_M0,
+  corGate,
+  data,
+  usd,
+} from '../lib/formato'
 
 export default function Portfolio() {
   const nav = useNavigate()
@@ -44,7 +55,7 @@ export default function Portfolio() {
 
       {/* Progresso até o primeiro saque — Constituição §2.3 */}
       <Cartao>
-        <div className="flex items-baseline justify-between">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
           <span className="text-sm text-suave">M0 · Primeiro saque</span>
           <span className="text-sm font-semibold">
             {(resumo?.robux_acumulado ?? 0).toLocaleString('en-US')} / {ROBUX_M0.toLocaleString('en-US')} Robux
@@ -53,7 +64,7 @@ export default function Portfolio() {
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
           <div className="h-full rounded-full bg-acento transition-all" style={{ width: `${pctM0}%` }} />
         </div>
-        <div className="mt-2 flex justify-between text-xs text-suave">
+        <div className="mt-2 flex flex-col gap-0.5 text-xs text-suave sm:flex-row sm:justify-between">
           <span>≈ {usd(resumo?.robux_acumulado ?? 0)} em DevEx</span>
           <span>faltam {(resumo?.robux_faltando_m0 ?? ROBUX_M0).toLocaleString('en-US')}</span>
         </div>
@@ -62,25 +73,41 @@ export default function Portfolio() {
       {/* Alertas automáticos — a Constituição empurrando as regras (§4.3) */}
       {alertas.length > 0 && (
         <div className="space-y-2">
-          {alertas.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => nav(`/projeto/${p.id}`)}
-              className="cursor-pointer rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200"
-            >
-              <strong>{p.codigo}</strong>{' '}
-              {p.estourou_build
-                ? `estourou o teto de 3 semanas de build (${p.dias_na_fase} dias). §6.1 diz: mata ou lança incompleto.`
-                : p.observacao_encerrada
-                  ? 'encerrou a janela de 14 dias. Hora do veredito (Fase 5).'
-                  : `está parado há ${p.dias_parado} dias.`}
-            </div>
-          ))}
+          {alertas.map((p) => {
+            const cta = p.observacao_encerrada
+              ? 'Ir para veredito'
+              : p.estourou_build
+                ? 'Ver fases'
+                : 'Ver projeto'
+            const destino = p.observacao_encerrada
+              ? `/projeto/${p.id}?aba=veredito`
+              : p.estourou_build
+                ? `/projeto/${p.id}?aba=fases`
+                : `/projeto/${p.id}`
+            return (
+              <div
+                key={p.id}
+                className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200"
+              >
+                <button type="button" onClick={() => nav(destino)} className="w-full text-left">
+                  <strong>{p.codigo}</strong>{' '}
+                  {p.estourou_build
+                    ? `estourou o teto de 3 semanas de build (${p.dias_na_fase} dias). §6.1 diz: mata ou lança incompleto.`
+                    : p.observacao_encerrada
+                      ? 'encerrou a janela de 14 dias. Hora do veredito (Fase 5).'
+                      : `está parado há ${p.dias_parado} dias.`}
+                </button>
+                <div className="mt-1">
+                  <LinkAcao onClick={() => nav(destino)}>{cta} →</LinkAcao>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
       {/* Contadores */}
-      <div className="grid grid-cols-3 gap-2 text-center">
+      <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3">
         {[
           ['Em projeto', resumo?.em_projeto ?? 0],
           ['Em build', resumo?.em_build ?? 0],
@@ -98,14 +125,20 @@ export default function Portfolio() {
 
       <div className="flex items-center justify-between pt-2">
         <h2 className="text-sm font-medium text-suave">Projetos</h2>
-        <button onClick={() => nav('/projeto/novo')} className="text-xs text-acento">
-          + novo projeto
-        </button>
+        <LinkAcao onClick={() => nav('/projeto/novo')}>+ novo projeto</LinkAcao>
       </div>
 
       {projetos.length === 0 ? (
         <Vazio>
-          Nenhum projeto ainda. O #01 nasce quando o Gustavo terminar a Fase 0 e vocês fecharem a Fase 1.
+          <p>Nenhum projeto ainda. O #01 nasce quando o Gustavo terminar a Fase 0 e vocês fecharem a Fase 1.</p>
+          <div className="mt-3 flex flex-wrap justify-center gap-3">
+            <Link to="/ciclo" className="text-xs text-acento hover:underline">
+              Ver ciclo →
+            </Link>
+            <Link to="/constituicao" className="text-xs text-acento hover:underline">
+              Ler regras →
+            </Link>
+          </div>
         </Vazio>
       ) : (
         <div className="space-y-2">
@@ -127,11 +160,11 @@ export default function Portfolio() {
               </div>
 
               {p.data_lancamento && (
-                <div className="mt-3 grid grid-cols-4 gap-2 border-t border-borda pt-3 text-center text-xs">
-                  <Metrica rotulo="Visit." valor={p.visitantes_unicos} />
-                  <Metrica rotulo="D1" valor={p.d1_retention} sufixo="%" />
-                  <Metrica rotulo="Sessão" valor={p.sessao_media_min} sufixo="min" />
-                  <Metrica rotulo="CCU" valor={p.ccu_pico} />
+                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-borda pt-3 text-center text-xs sm:grid-cols-4">
+                  <Metrica rotulo="Visit." valor={p.visitantes_unicos} gate={GATE_AMOSTRA} />
+                  <Metrica rotulo="D1" valor={p.d1_retention} gate={GATE_D1} sufixo="%" />
+                  <Metrica rotulo="Sessão" valor={p.sessao_media_min} gate={GATE_SESSAO} sufixo="min" />
+                  <Metrica rotulo="CCU" valor={p.ccu_pico} gate={GATE_CCU} />
                 </div>
               )}
 
@@ -148,10 +181,20 @@ export default function Portfolio() {
   )
 }
 
-function Metrica({ rotulo, valor, sufixo = '' }: { rotulo: string; valor: number | null; sufixo?: string }) {
+function Metrica({
+  rotulo,
+  valor,
+  sufixo = '',
+  gate,
+}: {
+  rotulo: string
+  valor: number | null
+  sufixo?: string
+  gate?: number
+}) {
   return (
     <div>
-      <div className="font-semibold">
+      <div className={`font-semibold ${corGate(valor, gate)}`}>
         {valor ?? '—'}
         {valor !== null ? sufixo : ''}
       </div>

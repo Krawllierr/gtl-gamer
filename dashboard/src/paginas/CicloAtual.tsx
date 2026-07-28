@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useSessao } from '../hooks/useSessao'
 import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
 import { DEMO_CICLO_ATIVO, DEMO_ESFORCO, DEMO_PERFIS } from '../demo/fixtures'
 import type { Ciclo, EsforcoRelativo, Perfil } from '../lib/tipos'
 import DicaDemo from '../componentes/DicaDemo'
-import { Botao, Campo, Cartao, Carregando, Erro, Etiqueta, Vazio } from '../componentes/ui'
-import { data } from '../lib/formato'
+import { Botao, Campo, Cartao, Carregando, Erro, Etiqueta, Sucesso, Vazio } from '../componentes/ui'
+import { data, hoje } from '../lib/formato'
+
+function diasRestantes(fim: string) {
+  const hojeMs = new Date(hoje() + 'T12:00:00').getTime()
+  const fimMs = new Date(fim.slice(0, 10) + 'T12:00:00').getTime()
+  return Math.ceil((fimMs - hojeMs) / 86400000)
+}
 
 export default function CicloAtual() {
   const { perfil } = useSessao()
@@ -17,6 +24,7 @@ export default function CicloAtual() {
   const [carregando, setCarregando] = useState(true)
   const [horasDecl, setHorasDecl] = useState('')
   const [erro, setErro] = useState<string | null>(null)
+  const [ok, setOk] = useState(false)
 
   async function carregar() {
     if (demo) {
@@ -54,33 +62,76 @@ export default function CicloAtual() {
     }
     if (!ciclo || !perfil) return
     setErro(null)
-    await supabase
+    setOk(false)
+    const { error } = await supabase
       .from('capacidade_declarada')
       .upsert(
         { ciclo_id: ciclo.id, perfil_id: perfil.id, horas_declaradas: Number(horasDecl) },
         { onConflict: 'ciclo_id,perfil_id' }
       )
-    setHorasDecl('')
-    carregar()
+    if (error) setErro(error.message)
+    else {
+      setOk(true)
+      setHorasDecl('')
+      carregar()
+    }
   }
 
   if (carregando) return <Carregando />
-  if (!ciclo) return <Vazio>Nenhum ciclo ativo.</Vazio>
+  if (!ciclo) {
+    return (
+      <Vazio>
+        <p>Nenhum ciclo ativo.</p>
+        <p className="mt-2 text-xs">
+          Peça ao Gabriel para abrir o próximo ciclo no Supabase (tabela <code>ciclos</code>, status{' '}
+          <code>ativo</code>).
+        </p>
+        <div className="mt-3">
+          <Link to="/tarefas" className="text-xs text-acento hover:underline">
+            Ir para tarefas →
+          </Link>
+        </div>
+      </Vazio>
+    )
+  }
 
   const meuPerfil =
     perfis.find((p) => p.id === perfil?.id) ??
     (demo ? DEMO_PERFIS.find((p) => p.nome === perfil?.nome) : undefined)
+
+  const meuEsforco =
+    esforco.find((e) => e.nome === perfil?.nome) ??
+    (demo ? esforco.find((e) => e.nome === perfil?.nome) : undefined)
+  const jaDeclarado = meuEsforco?.horas_declaradas != null
+  const restam = diasRestantes(ciclo.fim)
 
   return (
     <div className="space-y-4">
       <DicaDemo id="ciclo" />
 
       <Cartao>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="font-medium">Ciclo {ciclo.numero}</span>
-          <Etiqueta>
-            {data(ciclo.inicio)} → {data(ciclo.fim)}
-          </Etiqueta>
+          <div className="flex flex-wrap items-center gap-2">
+            <Etiqueta>
+              {data(ciclo.inicio)} → {data(ciclo.fim)}
+            </Etiqueta>
+            <Etiqueta
+              className={
+                restam < 0
+                  ? 'border-red-500/40 bg-red-500/10 text-red-300'
+                  : restam <= 2
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+                    : undefined
+              }
+            >
+              {restam < 0
+                ? `encerrou há ${Math.abs(restam)}d`
+                : restam === 0
+                  ? 'encerra hoje'
+                  : `${restam}d restantes`}
+            </Etiqueta>
+          </div>
         </div>
         <p className="mt-2 text-sm text-suave">{ciclo.objetivo}</p>
       </Cartao>
@@ -92,10 +143,16 @@ export default function CicloAtual() {
           Declare ANTES de trabalhar. É isso que torna a comparação justa: o índice usa realizado ÷ declarado, nunca
           horas absolutas. Declarar baixo não isenta da cota mínima.
         </p>
-        <div className="mt-3 flex items-end gap-2">
+        {jaDeclarado && (
+          <p className="mt-2 text-sm text-acento">
+            Declarado: {meuEsforco?.horas_declaradas}h
+            {meuEsforco?.pct_realizado != null && ` · ${meuEsforco.pct_realizado}% realizado`}
+          </p>
+        )}
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="flex-1">
             <Campo
-              rotulo="Horas disponíveis"
+              rotulo={jaDeclarado ? 'Atualizar horas' : 'Horas disponíveis'}
               type="number"
               min={1}
               step={1}
@@ -105,13 +162,18 @@ export default function CicloAtual() {
               disabled={demo}
             />
           </div>
-          <Botao disabled={!horasDecl || demo} onClick={declarar}>
-            Declarar
+          <Botao disabled={!horasDecl || demo} onClick={declarar} className="w-full sm:w-auto">
+            {jaDeclarado ? 'Atualizar' : 'Declarar'}
           </Botao>
         </div>
         {erro && (
           <div className="mt-2">
             <Erro>{erro}</Erro>
+          </div>
+        )}
+        {ok && (
+          <div className="mt-2">
+            <Sucesso>Capacidade registrada.</Sucesso>
           </div>
         )}
       </Cartao>

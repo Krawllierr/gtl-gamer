@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useSessao } from '../hooks/useSessao'
 import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
@@ -11,9 +11,9 @@ import {
   demoProjeto,
   demoStatus,
 } from '../demo/fixtures'
-import type { FaseLog, Metrica, Projeto as TProjeto, ProjetoStatus, Sessao, Veredito } from '../lib/tipos'
+import type { Fase, FaseLog, Metrica, Projeto as TProjeto, ProjetoStatus, Sessao, Veredito } from '../lib/tipos'
 import DicaDemo from '../componentes/DicaDemo'
-import { Area, Botao, Campo, Cartao, Carregando, Erro, Etiqueta, Vazio } from '../componentes/ui'
+import { Area, Botao, Campo, Cartao, Carregando, Erro, Etiqueta, Sucesso, Vazio } from '../componentes/ui'
 import {
   FASES,
   GATE_AMOSTRA,
@@ -23,6 +23,7 @@ import {
   NOME_FASE,
   NOME_STATUS,
   TETO_DIAS,
+  corGate,
   data,
   horas,
   hoje,
@@ -30,13 +31,25 @@ import {
 
 type Aba = 'definicao' | 'fases' | 'log' | 'metricas' | 'veredito'
 
+const ABAS_VALIDAS: Aba[] = ['definicao', 'fases', 'log', 'metricas', 'veredito']
+
+function abaDeUrl(raw: string | null): Aba {
+  if (raw && ABAS_VALIDAS.includes(raw as Aba)) return raw as Aba
+  return 'definicao'
+}
+
 export default function Projeto() {
   const { id } = useParams<{ id: string }>()
+  const [params, setParams] = useSearchParams()
   const { ativo: demo } = useDemo()
-  const [aba, setAba] = useState<Aba>('definicao')
+  const aba = abaDeUrl(params.get('aba'))
   const [proj, setProj] = useState<TProjeto | null>(null)
   const [status, setStatus] = useState<ProjetoStatus | null>(null)
   const [carregando, setCarregando] = useState(true)
+
+  function setAba(next: Aba) {
+    setParams(next === 'definicao' ? {} : { aba: next }, { replace: true })
+  }
 
   async function carregar() {
     if (!id) return
@@ -75,10 +88,10 @@ export default function Projeto() {
     <div className="space-y-4">
       <DicaDemo id="projeto" />
 
-      <div>
-        <div className="flex items-center gap-2">
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="text-lg">{status?.semaforo}</span>
-          <h1 className="text-lg font-semibold">
+          <h1 className="truncate text-lg font-semibold">
             {proj.codigo} · {proj.nome}
           </h1>
         </div>
@@ -90,12 +103,14 @@ export default function Projeto() {
         </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-borda pb-px">
+      <StepperFases atual={proj.fase_atual} />
+
+      <div className="-mx-4 flex gap-1 overflow-x-auto border-b border-borda px-4 pb-px">
         {abas.map(([k, r]) => (
           <button
             key={k}
             onClick={() => setAba(k)}
-            className={`whitespace-nowrap px-3 py-2 text-sm ${
+            className={`whitespace-nowrap px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acento/50 ${
               aba === k ? 'border-b-2 border-acento text-texto' : 'text-suave'
             }`}
           >
@@ -108,7 +123,46 @@ export default function Projeto() {
       {aba === 'fases' && <Fases p={proj} recarregar={carregar} demo={demo} />}
       {aba === 'log' && <Log projetoId={proj.id} demo={demo} />}
       {aba === 'metricas' && <Metricas projetoId={proj.id} recarregar={carregar} demo={demo} />}
-      {aba === 'veredito' && <VeredictoAba p={proj} demo={demo} />}
+      {aba === 'veredito' && <VeredictoAba p={proj} demo={demo} onRegistrado={carregar} />}
+    </div>
+  )
+}
+
+/* ---------------- STEPPER ---------------- */
+
+function StepperFases({ atual }: { atual: Fase }) {
+  const idx = FASES.indexOf(atual)
+  return (
+    <div className="overflow-x-auto">
+      <ol className="flex min-w-max gap-1">
+        {FASES.map((f, i) => {
+          const teto = TETO_DIAS[f]
+          const ativa = i === idx
+          const passada = i < idx
+          return (
+            <li
+              key={f}
+              className={`flex flex-1 flex-col items-center rounded-lg border px-2 py-1.5 text-center ${
+                ativa
+                  ? 'border-acento/50 bg-acento/10'
+                  : passada
+                    ? 'border-borda bg-white/5'
+                    : 'border-transparent opacity-50'
+              }`}
+            >
+              <span className={`text-[10px] font-medium ${ativa ? 'text-acento' : 'text-suave'}`}>
+                F{i}
+              </span>
+              <span className={`text-[10px] leading-tight ${ativa ? 'text-texto' : 'text-suave'}`}>
+                {NOME_FASE[f].split(' · ')[1]}
+              </span>
+              {teto !== undefined && (
+                <span className="mt-0.5 text-[9px] text-suave">≤{teto}d</span>
+              )}
+            </li>
+          )
+        })}
+      </ol>
     </div>
   )
 }
@@ -116,12 +170,26 @@ export default function Projeto() {
 /* ---------------- DEFINIÇÃO ---------------- */
 
 function Definicao({ p }: { p: TProjeto }) {
-  const linhas: [string, string | null][] = [
+  const linhas: [string, ReactNode][] = [
     ['Gênero base', p.genero_base],
     ['Uma frase', p.uma_frase],
     ['A alteração única', p.alteracao_unica],
     ['Monetização', p.modelo_monetizacao],
-    ['URL no Roblox', p.roblox_url],
+    [
+      'URL no Roblox',
+      p.roblox_url ? (
+        <a
+          href={p.roblox_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="break-all text-acento hover:underline"
+        >
+          {p.roblox_url}
+        </a>
+      ) : (
+        '—'
+      ),
+    ],
     ['Início', data(p.data_inicio)],
     ['Lançamento', p.data_lancamento ? data(p.data_lancamento) : null],
     ['Fim da observação', p.data_fim_observacao ? data(p.data_fim_observacao) : null],
@@ -145,9 +213,9 @@ function Definicao({ p }: { p: TProjeto }) {
       <Cartao>
         <dl className="space-y-2 text-sm">
           {linhas.map(([k, v]) => (
-            <div key={k} className="flex justify-between gap-4">
+            <div key={k} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4">
               <dt className="shrink-0 text-suave">{k}</dt>
-              <dd className="text-right">{v || '—'}</dd>
+              <dd className="break-words text-left sm:text-right">{v || '—'}</dd>
             </div>
           ))}
         </dl>
@@ -188,6 +256,7 @@ function Fases({ p, recarregar, demo }: { p: TProjeto; recarregar: () => void; d
     : 0
   const teto = TETO_DIAS[p.fase_atual]
   const estourou = teto !== undefined && diasNaFase > teto
+  const pctTeto = teto !== undefined ? Math.min(100, (diasNaFase / teto) * 100) : null
 
   async function avancar() {
     if (!proxima) return
@@ -202,6 +271,11 @@ function Fases({ p, recarregar, demo }: { p: TProjeto; recarregar: () => void; d
       )
       return
     }
+    const msg = estourou
+      ? `Teto estourado (${diasNaFase}/${teto} dias). §6.1: mata ou lança incompleto. Avançar para ${NOME_FASE[proxima]} mesmo assim?`
+      : `Avançar para ${NOME_FASE[proxima]}?`
+    if (!window.confirm(msg)) return
+
     await supabase
       .from('fases_log')
       .update({ saiu_em: hoje(), justificativa: justificativa.trim() || null })
@@ -230,6 +304,14 @@ function Fases({ p, recarregar, demo }: { p: TProjeto; recarregar: () => void; d
         <div className="mt-1 text-xs text-suave">
           {diasNaFase} dias nesta fase{teto !== undefined && ` · teto de ${teto}`}
         </div>
+        {pctTeto !== null && (
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div
+              className={`h-full rounded-full transition-all ${estourou ? 'bg-amber-400' : 'bg-acento'}`}
+              style={{ width: `${pctTeto}%` }}
+            />
+          </div>
+        )}
         {estourou && (
           <p className="mt-2 text-xs text-amber-200">
             Teto estourado. O §6.1 diz: mata ou lança incompleto — nunca estende em silêncio.
@@ -341,6 +423,7 @@ function Metricas({
     ctr: '',
   })
   const [erro, setErro] = useState<string | null>(null)
+  const [ok, setOk] = useState(false)
 
   async function carregar() {
     if (demo) {
@@ -364,9 +447,11 @@ function Metricas({
     e.preventDefault()
     if (demo) {
       setErro(MSG_DEMO_BLOQUEIO)
+      setOk(false)
       return
     }
     setErro(null)
+    setOk(false)
     const { error } = await supabase.from('metricas').upsert(
       {
         projeto_id: projetoId,
@@ -383,6 +468,16 @@ function Metricas({
     )
     if (error) setErro(error.message)
     else {
+      setOk(true)
+      setForm((f) => ({
+        ...f,
+        visitantes_unicos: '',
+        d1_retention: '',
+        sessao_media_min: '',
+        ccu_pico: '',
+        robux_dia: '',
+        ctr: '',
+      }))
       carregar()
       recarregar()
     }
@@ -452,6 +547,11 @@ function Metricas({
               <Erro>{erro}</Erro>
             </div>
           )}
+          {ok && (
+            <div className="mt-2">
+              <Sucesso>Snapshot salvo.</Sucesso>
+            </div>
+          )}
           <Botao type="submit" disabled={demo} className="mt-3 w-full">
             {demo ? 'Bloqueado no Demo' : 'Salvar snapshot'}
           </Botao>
@@ -465,7 +565,7 @@ function Metricas({
           {lista.map((m) => (
             <Cartao key={m.id}>
               <div className="text-xs text-suave">{data(m.data)}</div>
-              <div className="mt-2 grid grid-cols-5 gap-1 text-center text-xs">
+              <div className="mt-2 grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-3 lg:grid-cols-5">
                 <Cel r="Visit." v={m.visitantes_unicos} gate={GATE_AMOSTRA} />
                 <Cel r="D1" v={m.d1_retention} gate={GATE_D1} sufixo="%" />
                 <Cel r="Sessão" v={m.sessao_media_min} gate={GATE_SESSAO} />
@@ -481,10 +581,9 @@ function Metricas({
 }
 
 function Cel({ r, v, gate, sufixo = '' }: { r: string; v: number | null; gate?: number; sufixo?: string }) {
-  const cor = gate === undefined || v === null ? '' : v >= gate ? 'text-emerald-300' : 'text-red-300'
   return (
     <div>
-      <div className={`font-semibold ${cor}`}>
+      <div className={`font-semibold ${corGate(v, gate)}`}>
         {v ?? '—'}
         {v !== null ? sufixo : ''}
       </div>
@@ -495,7 +594,27 @@ function Cel({ r, v, gate, sufixo = '' }: { r: string; v: number | null; gate?: 
 
 /* ---------------- VEREDITO ---------------- */
 
-function VeredictoAba({ p, demo }: { p: TProjeto; demo: boolean }) {
+function preencherDeMetricas(lista: Metrica[]) {
+  if (!lista.length) return { visit: '', d1: '', ses: '', ccu: '' }
+  const maisRecente = lista[0]
+  const maxVisit = Math.max(...lista.map((m) => m.visitantes_unicos ?? 0))
+  return {
+    visit: String(maxVisit || maisRecente.visitantes_unicos || ''),
+    d1: maisRecente.d1_retention != null ? String(maisRecente.d1_retention) : '',
+    ses: maisRecente.sessao_media_min != null ? String(maisRecente.sessao_media_min) : '',
+    ccu: String(Math.max(...lista.map((m) => m.ccu_pico ?? 0)) || ''),
+  }
+}
+
+function VeredictoAba({
+  p,
+  demo,
+  onRegistrado,
+}: {
+  p: TProjeto
+  demo: boolean
+  onRegistrado: () => void
+}) {
   const [v, setV] = useState<Veredito | null>(null)
   const [visit, setVisit] = useState('')
   const [d1, setD1] = useState('')
@@ -503,18 +622,46 @@ function VeredictoAba({ p, demo }: { p: TProjeto; demo: boolean }) {
   const [ccu, setCcu] = useState('')
   const [pm, setPm] = useState('')
   const [erro, setErro] = useState<string | null>(null)
+  const [ok, setOk] = useState(false)
+  const [preenchido, setPreenchido] = useState(false)
 
-  useEffect(() => {
+  async function carregarVeredito() {
     if (demo) {
       setV(DEMO_VEREDICTOS[p.id] ?? null)
+      if (!DEMO_VEREDICTOS[p.id] && !preenchido) {
+        const sug = preencherDeMetricas(DEMO_METRICAS[p.id] ?? [])
+        setVisit(sug.visit)
+        setD1(sug.d1)
+        setSes(sug.ses)
+        setCcu(sug.ccu)
+        setPreenchido(true)
+      }
       return
     }
-    supabase
+    const { data: ver } = await supabase
       .from('veredictos')
       .select('*')
       .eq('projeto_id', p.id)
       .maybeSingle()
-      .then(({ data }) => setV(data as Veredito | null))
+    setV(ver as Veredito | null)
+    if (!ver && !preenchido) {
+      const { data: mets } = await supabase
+        .from('metricas')
+        .select('*')
+        .eq('projeto_id', p.id)
+        .order('data', { ascending: false })
+      const sug = preencherDeMetricas((mets ?? []) as Metrica[])
+      setVisit(sug.visit)
+      setD1(sug.d1)
+      setSes(sug.ses)
+      setCcu(sug.ccu)
+      setPreenchido(true)
+    }
+  }
+
+  useEffect(() => {
+    setPreenchido(false)
+    carregarVeredito()
   }, [p.id, demo])
 
   if (v) {
@@ -525,13 +672,16 @@ function VeredictoAba({ p, demo }: { p: TProjeto; demo: boolean }) {
       falhou: 'Falhou',
     }
     return (
-      <Cartao>
-        <div className="flex items-center justify-between">
-          <span className="font-medium">{rot[v.resultado]}</span>
-          <Etiqueta>{data(v.data)}</Etiqueta>
-        </div>
-        <p className="mt-3 whitespace-pre-wrap text-sm text-suave">{v.post_mortem}</p>
-      </Cartao>
+      <div className="space-y-3">
+        {ok && <Sucesso>Veredito registrado.</Sucesso>}
+        <Cartao>
+          <div className="flex items-center justify-between">
+            <span className="font-medium">{rot[v.resultado]}</span>
+            <Etiqueta>{data(v.data)}</Etiqueta>
+          </div>
+          <p className="mt-3 whitespace-pre-wrap text-sm text-suave">{v.post_mortem}</p>
+        </Cartao>
+      </div>
     )
   }
 
@@ -557,31 +707,44 @@ function VeredictoAba({ p, demo }: { p: TProjeto; demo: boolean }) {
       return
     }
     setErro(null)
-    const { error } = await supabase.from('veredictos').insert({
-      projeto_id: p.id,
-      visitantes_unicos_janela: nVisit,
-      d1_observado: Number(d1 || 0),
-      sessao_observada: Number(ses || 0),
-      ccu_observado: Number(ccu || 0),
-      gate_d1: gd1,
-      gate_sessao: gses,
-      gate_ccu: gccu,
-      resultado,
-      post_mortem: pm.trim(),
-    })
+    const { data: inserido, error } = await supabase
+      .from('veredictos')
+      .insert({
+        projeto_id: p.id,
+        visitantes_unicos_janela: nVisit,
+        d1_observado: Number(d1 || 0),
+        sessao_observada: Number(ses || 0),
+        ccu_observado: Number(ccu || 0),
+        gate_d1: gd1,
+        gate_sessao: gses,
+        gate_ccu: gccu,
+        resultado,
+        post_mortem: pm.trim(),
+      })
+      .select()
+      .single()
     if (error)
       setErro(
         error.message.includes('post_mortem_obrigatorio')
           ? 'Post-mortem obrigatório, mínimo 30 caracteres. Sem ele o portfólio não gera aprendizado composto (§6, Fase 5).'
           : error.message
       )
-    else location.reload()
+    else {
+      setV(inserido as Veredito)
+      setOk(true)
+      onRegistrado()
+    }
   }
 
   return (
     <form onSubmit={registrar} className="space-y-3">
       <Cartao>
         <div className="mb-3 text-sm font-medium">Registrar veredito</div>
+        {preenchido && (visit || d1 || ses || ccu) && (
+          <p className="mb-3 text-xs text-suave">
+            Campos pré-preenchidos a partir dos snapshots de métricas — revise antes de registrar.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <Campo
             rotulo="Visitantes na janela"

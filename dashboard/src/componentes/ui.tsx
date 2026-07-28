@@ -1,4 +1,12 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  ReactNode,
+  TextareaHTMLAttributes,
+} from 'react'
+
+const FOCUS =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acento/50 focus-visible:ring-offset-0'
 
 export function Cartao({
   children,
@@ -53,7 +61,23 @@ export function Botao({
   return (
     <button
       {...props}
-      className={`rounded-lg px-4 py-2.5 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed ${estilos[variante]} ${className}`}
+      className={`min-h-[44px] rounded-lg px-4 py-2.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS} ${estilos[variante]} ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+export function LinkAcao({
+  children,
+  className = '',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      {...props}
+      className={`inline-flex min-h-[44px] items-center text-xs font-medium text-acento hover:underline ${FOCUS} ${className}`}
     >
       {children}
     </button>
@@ -70,7 +94,7 @@ export function Campo({
       <span className="mb-1 block text-sm text-suave">{rotulo}</span>
       <input
         {...props}
-        className="w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento"
+        className={`w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento ${FOCUS}`}
       />
       {dica && <span className="mt-1 block text-xs text-suave">{dica}</span>}
     </label>
@@ -87,7 +111,7 @@ export function Area({
       <span className="mb-1 block text-sm text-suave">{rotulo}</span>
       <textarea
         {...props}
-        className="w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento"
+        className={`w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento ${FOCUS}`}
       />
       {dica && <span className="mt-1 block text-xs text-suave">{dica}</span>}
     </label>
@@ -103,12 +127,27 @@ export function Vazio({ children }: { children: ReactNode }) {
 }
 
 export function Carregando() {
-  return <div className="p-8 text-center text-sm text-suave">Carregando…</div>
+  return (
+    <div className="space-y-3 p-4" aria-busy="true" aria-label="Carregando">
+      <div className="h-4 w-1/3 animate-pulse rounded bg-white/10" />
+      <div className="h-20 animate-pulse rounded-xl bg-white/5" />
+      <div className="h-20 animate-pulse rounded-xl bg-white/5" />
+      <div className="h-20 animate-pulse rounded-xl bg-white/5" />
+    </div>
+  )
 }
 
 export function Erro({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+      {children}
+    </div>
+  )
+}
+
+export function Sucesso({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-300">
       {children}
     </div>
   )

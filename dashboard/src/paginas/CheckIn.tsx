@@ -5,8 +5,10 @@ import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
 import { DEMO_CICLO_ATIVO, DEMO_PROJETOS, DEMO_SESSOES } from '../demo/fixtures'
 import type { Ciclo, Projeto, Sessao } from '../lib/tipos'
 import DicaDemo from '../componentes/DicaDemo'
-import { Area, Botao, Campo, Cartao, Erro, Etiqueta } from '../componentes/ui'
+import { Area, Botao, Campo, Cartao, Erro, Etiqueta, Sucesso } from '../componentes/ui'
 import { data, horas, hoje } from '../lib/formato'
+
+const CHIPS = [30, 60, 90, 120]
 
 // Registro manual, não cronômetro.
 // Cronômetro é elegante e falha na prática: ninguém lembra de dar check-out
@@ -114,7 +116,7 @@ export default function CheckIn() {
             value={projetoId}
             onChange={(e) => setProjetoId(e.target.value)}
             disabled={demo}
-            className="w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento disabled:opacity-50"
+            className="w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento focus-visible:ring-2 focus-visible:ring-acento/50 disabled:opacity-50"
           >
             <option value="">Sem projeto (trabalho de estúdio)</option>
             {projetos.map((p) => (
@@ -125,17 +127,36 @@ export default function CheckIn() {
           </select>
         </label>
 
-        <Campo
-          rotulo="Duração (minutos)"
-          type="number"
-          min={1}
-          step={5}
-          inputMode="numeric"
-          value={duracao}
-          onChange={(e) => setDuracao(e.target.value)}
-          required
-          disabled={demo}
-        />
+        <div>
+          <Campo
+            rotulo="Duração (minutos)"
+            type="number"
+            min={1}
+            step={5}
+            inputMode="numeric"
+            value={duracao}
+            onChange={(e) => setDuracao(e.target.value)}
+            required
+            disabled={demo}
+          />
+          <div className="mt-2 flex flex-wrap gap-2">
+            {CHIPS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                disabled={demo}
+                onClick={() => setDuracao(String(m))}
+                className={`min-h-[36px] rounded-md border px-3 text-xs transition disabled:opacity-40 ${
+                  duracao === String(m)
+                    ? 'border-acento/50 bg-acento/15 text-acento'
+                    : 'border-borda bg-white/5 text-suave hover:text-texto'
+                }`}
+              >
+                {m} min
+              </button>
+            ))}
+          </div>
+        </div>
 
         <Area
           rotulo="Entrega"
@@ -162,11 +183,7 @@ export default function CheckIn() {
         />
 
         {erro && <Erro>{erro}</Erro>}
-        {ok && (
-          <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-300">
-            Registrado.
-          </div>
-        )}
+        {ok && <Sucesso>Registrado.</Sucesso>}
 
         <Botao type="submit" disabled={demo || ocupado || entrega.trim().length < 10} className="w-full">
           {demo ? 'Bloqueado no Demo' : ocupado ? 'Registrando…' : 'Registrar sessão'}

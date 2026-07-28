@@ -78,3 +78,9 @@ export function hoje() {
 export function usd(robux: number) {
   return (robux * TAXA_DEVEX).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
+
+/** Emerald/red for gate metrics; empty string when no value or no gate. */
+export function corGate(valor: number | null | undefined, gate?: number) {
+  if (gate === undefined || valor === null || valor === undefined) return ''
+  return valor >= gate ? 'text-emerald-300' : 'text-red-300'
+}

@@ -1,20 +1,38 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useSessao } from '../hooks/useSessao'
 import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
-import { DEMO_TAREFAS, demoPerfilIdPorNome } from '../demo/fixtures'
-import type { Tarefa } from '../lib/tipos'
+import { DEMO_PROJETOS, DEMO_TAREFAS, demoPerfilIdPorNome } from '../demo/fixtures'
+import type { Prioridade, StatusTarefa, Tarefa } from '../lib/tipos'
 import DicaDemo from '../componentes/DicaDemo'
-import { Area, Botao, Cartao, Carregando, Erro, Etiqueta, Vazio } from '../componentes/ui'
-import { COR_PRIORIDADE, data, hoje } from '../lib/formato'
+import { Area, Botao, Cartao, Carregando, Erro, Etiqueta, LinkAcao, Sucesso, Vazio } from '../componentes/ui'
+import { COR_PRIORIDADE, NOME_TAREFA, data, hoje } from '../lib/formato'
+
+const ORDEM_PRIO: Record<Prioridade, number> = { alta: 0, media: 1, baixa: 2 }
+
+function ordenarAbertas(lista: Tarefa[]) {
+  return [...lista].sort((a, b) => {
+    const aAtr = a.prazo && a.prazo < hoje() ? 0 : 1
+    const bAtr = b.prazo && b.prazo < hoje() ? 0 : 1
+    if (aAtr !== bAtr) return aAtr - bAtr
+    if (ORDEM_PRIO[a.prioridade] !== ORDEM_PRIO[b.prioridade])
+      return ORDEM_PRIO[a.prioridade] - ORDEM_PRIO[b.prioridade]
+    const pa = a.prazo ?? '9999'
+    const pb = b.prazo ?? '9999'
+    return pa.localeCompare(pb)
+  })
+}
 
 export default function MinhasTarefas() {
   const { perfil } = useSessao()
   const { ativo: demo } = useDemo()
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
+  const [mapaProjeto, setMapaProjeto] = useState<Record<string, string>>({})
   const [carregando, setCarregando] = useState(true)
   const [aberta, setAberta] = useState<string | null>(null)
   const [todas, setTodas] = useState(false)
+  const [msgOk, setMsgOk] = useState<string | null>(null)
 
   async function carregar() {
     if (!perfil) return
@@ -23,6 +41,9 @@ export default function MinhasTarefas() {
       let lista = DEMO_TAREFAS
       if (!todas) lista = lista.filter((t) => t.responsavel_id === meuId)
       setTarefas(lista)
+      const mapa: Record<string, string> = {}
+      for (const p of DEMO_PROJETOS) mapa[p.id] = `${p.codigo} · ${p.nome}`
+      setMapaProjeto(mapa)
       setCarregando(false)
       return
     }
@@ -30,6 +51,13 @@ export default function MinhasTarefas() {
     if (!todas) q = q.eq('responsavel_id', perfil.id)
     const { data } = await q
     setTarefas((data ?? []) as Tarefa[])
+    const ids = [...new Set(((data ?? []) as Tarefa[]).map((t) => t.projeto_id).filter(Boolean))] as string[]
+    if (ids.length) {
+      const { data: projs } = await supabase.from('projetos').select('id, codigo, nome').in('id', ids)
+      const mapa: Record<string, string> = {}
+      for (const p of projs ?? []) mapa[p.id] = `${p.codigo} · ${p.nome}`
+      setMapaProjeto(mapa)
+    } else setMapaProjeto({})
     setCarregando(false)
   }
 
@@ -40,20 +68,24 @@ export default function MinhasTarefas() {
 
   if (carregando) return <Carregando />
 
-  const abertas = tarefas.filter((t) => t.status !== 'concluida' && t.status !== 'cancelada')
+  const abertas = ordenarAbertas(
+    tarefas.filter((t) => t.status !== 'concluida' && t.status !== 'cancelada')
+  )
   const feitas = tarefas.filter((t) => t.status === 'concluida')
 
   return (
     <div className="space-y-4">
       <DicaDemo id="tarefas" />
 
+      {msgOk && <Sucesso>{msgOk}</Sucesso>}
+
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-suave">
           {todas ? 'Todas as tarefas' : 'Minhas tarefas'} · {abertas.length} abertas
         </h2>
-        <button onClick={() => setTodas(!todas)} className="text-xs text-acento">
+        <LinkAcao onClick={() => setTodas(!todas)}>
           {todas ? 'ver só as minhas' : 'ver todas'}
-        </button>
+        </LinkAcao>
       </div>
 
       {abertas.length === 0 ? (
@@ -68,6 +100,11 @@ export default function MinhasTarefas() {
               abrir={() => setAberta(aberta === t.id ? null : t.id)}
               recarregar={carregar}
               demo={demo}
+              rotuloProjeto={t.projeto_id ? mapaProjeto[t.projeto_id] : undefined}
+              onSucesso={(msg) => {
+                setMsgOk(msg)
+                setTimeout(() => setMsgOk(null), 3000)
+              }}
             />
           ))}
         </div>
@@ -96,12 +133,16 @@ function CartaoTarefa({
   abrir,
   recarregar,
   demo,
+  rotuloProjeto,
+  onSucesso,
 }: {
   t: Tarefa
   aberta: boolean
   abrir: () => void
   recarregar: () => void
   demo: boolean
+  rotuloProjeto?: string
+  onSucesso: (msg: string) => void
 }) {
   const [resultado, setResultado] = useState(t.resultado ?? '')
   const [notas, setNotas] = useState(t.notas ?? '')
@@ -110,7 +151,7 @@ function CartaoTarefa({
 
   const atrasada = t.prazo && t.prazo < hoje() && t.status !== 'concluida'
 
-  async function salvar(campos: Partial<Tarefa>) {
+  async function salvar(campos: Partial<Tarefa>, sucessoMsg?: string) {
     if (demo) {
       setErro(MSG_DEMO_BLOQUEIO)
       return
@@ -119,7 +160,10 @@ function CartaoTarefa({
     setErro(null)
     const { error } = await supabase.from('tarefas').update(campos).eq('id', t.id)
     if (error) setErro(traduzir(error.message))
-    else recarregar()
+    else {
+      if (sucessoMsg) onSucesso(sucessoMsg)
+      recarregar()
+    }
     setOcupado(false)
   }
 
@@ -128,9 +172,14 @@ function CartaoTarefa({
       <div onClick={abrir} className="cursor-pointer">
         <div className="flex items-start justify-between gap-2">
           <span className="font-medium leading-snug">{t.titulo}</span>
-          <Etiqueta className={COR_PRIORIDADE[t.prioridade]}>{t.prioridade}</Etiqueta>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <Etiqueta className={COR_PRIORIDADE[t.prioridade]}>{t.prioridade}</Etiqueta>
+            {t.status !== 'pendente' && (
+              <Etiqueta>{NOME_TAREFA[t.status as StatusTarefa] ?? t.status}</Etiqueta>
+            )}
+          </div>
         </div>
-        <div className="mt-1 flex items-center gap-2 text-xs text-suave">
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-suave">
           {t.prazo && (
             <span className={atrasada ? 'text-red-300' : ''}>
               {atrasada ? 'atrasada · ' : 'até '}
@@ -142,6 +191,13 @@ function CartaoTarefa({
           )}
           {t.notas && !t.contestada && <span>· tem nota</span>}
         </div>
+        {rotuloProjeto && t.projeto_id && (
+          <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+            <Link to={`/projeto/${t.projeto_id}`} className="text-[11px] text-acento hover:underline">
+              → {rotuloProjeto}
+            </Link>
+          </div>
+        )}
       </div>
 
       {aberta && (
@@ -179,14 +235,19 @@ function CartaoTarefa({
           <div className="flex flex-wrap gap-2">
             <Botao
               disabled={demo || ocupado || resultado.trim().length < 10}
-              onClick={() => salvar({ status: 'concluida', resultado, notas: notas || null })}
+              onClick={() =>
+                salvar(
+                  { status: 'concluida', resultado, notas: notas || null },
+                  'Tarefa concluída.'
+                )
+              }
             >
               Concluir
             </Botao>
             <Botao
               variante="secundario"
               disabled={demo || ocupado}
-              onClick={() => salvar({ notas: notas || null, resultado: resultado || null })}
+              onClick={() => salvar({ notas: notas || null, resultado: resultado || null }, 'Salvo.')}
             >
               Salvar
             </Botao>

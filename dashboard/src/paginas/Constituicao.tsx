@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { marked } from 'marked'
 // A Constituição vive na raiz do repositório e é embutida no build.
 // Consequência: todo deploy carrega a versão vigente — não existe cópia para
@@ -7,6 +7,7 @@ import textoConstituicao from '../../../CONSTITUICAO.md?raw'
 
 export default function Constituicao() {
   const [busca, setBusca] = useState('')
+  const [mostrarTopo, setMostrarTopo] = useState(false)
 
   const html = useMemo(() => marked.parse(textoConstituicao) as string, [])
 
@@ -18,6 +19,14 @@ export default function Constituicao() {
       if (m) achados.push({ id: slug(m[1]), titulo: m[1] })
     }
     return achados
+  }, [])
+
+  useEffect(() => {
+    function onScroll() {
+      setMostrarTopo(window.scrollY > 400)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   const filtradas = secoes.filter((s) => s.titulo.toLowerCase().includes(busca.toLowerCase()))
@@ -36,7 +45,7 @@ export default function Constituicao() {
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
         placeholder="Buscar seção…"
-        className="w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento"
+        className="w-full rounded-lg border border-borda bg-fundo px-3 py-2.5 outline-none focus:border-acento focus-visible:ring-2 focus-visible:ring-acento/50"
       />
 
       <div className="rounded-xl border border-borda bg-painel p-4">
@@ -56,7 +65,7 @@ export default function Constituicao() {
 
       <article
         className="prose prose-invert prose-sm max-w-none
-                   prose-headings:scroll-mt-20
+                   prose-headings:scroll-mt-24
                    prose-a:text-acento
                    prose-table:block prose-table:overflow-x-auto
                    prose-th:whitespace-nowrap
@@ -65,6 +74,16 @@ export default function Constituicao() {
                    prose-hr:border-borda"
         dangerouslySetInnerHTML={{ __html: comAncoras(html) }}
       />
+
+      {mostrarTopo && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-24 right-4 z-20 min-h-[44px] rounded-full border border-borda bg-painel px-4 text-xs font-medium text-acento shadow-lg backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acento/50"
+        >
+          ↑ Topo
+        </button>
+      )}
     </div>
   )
 }

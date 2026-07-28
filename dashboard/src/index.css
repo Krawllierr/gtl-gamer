@@ -5,10 +5,13 @@
 @layer base {
   html {
     color-scheme: dark;
+    overflow-x: hidden;
   }
   body {
     @apply bg-fundo text-texto antialiased;
     font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100dvh;
+    overflow-x: hidden;
     /* respeita a área segura do iPhone (barra inferior) */
     padding-bottom: env(safe-area-inset-bottom);
   }

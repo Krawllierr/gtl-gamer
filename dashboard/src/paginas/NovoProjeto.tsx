@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDemo, MSG_DEMO_BLOQUEIO } from '../hooks/useDemo'
+import { DEMO_PROJETOS } from '../demo/fixtures'
 import DicaDemo from '../componentes/DicaDemo'
 import { Area, Botao, Campo, Cartao, Erro } from '../componentes/ui'
 
@@ -17,16 +18,36 @@ export default function NovoProjeto() {
   const [monetizacao, setMonetizacao] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  const [ativos, setAtivos] = useState(0)
 
   const passos = loop
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean)
+  const loopEstourado = passos.length > 3
+
+  useEffect(() => {
+    ;(async () => {
+      if (demo) {
+        setAtivos(DEMO_PROJETOS.filter((p) => p.ativo).length)
+        return
+      }
+      const { count } = await supabase
+        .from('projetos')
+        .select('*', { count: 'exact', head: true })
+        .eq('ativo', true)
+      setAtivos(count ?? 0)
+    })()
+  }, [demo])
 
   async function criar(e: FormEvent) {
     e.preventDefault()
     if (demo) {
       setErro(MSG_DEMO_BLOQUEIO)
+      return
+    }
+    if (loopEstourado) {
+      setErro('O core loop tem no máximo 3 passos (§6, Fase 1).')
       return
     }
     setOcupado(true)
@@ -56,7 +77,6 @@ export default function NovoProjeto() {
       return
     }
 
-    // Abre o histórico de fases na Fase 0
     await supabase.from('fases_log').insert({ projeto_id: data.id, fase: 'f0_research' })
     nav(`/projeto/${data.id}`)
   }
@@ -66,7 +86,16 @@ export default function NovoProjeto() {
       <DicaDemo id="novo-projeto" />
       <h2 className="text-sm font-medium text-suave">Novo projeto</h2>
 
-      <div className="grid grid-cols-3 gap-2">
+      {ativos > 0 && (
+        <Cartao className="border-amber-500/30 bg-amber-500/5">
+          <p className="text-xs text-amber-200">
+            Já existe {ativos === 1 ? '1 projeto ativo' : `${ativos} projetos ativos`}. §10.3: um projeto ativo por
+            vez. Só avance se o atual estiver arquivado ou for o teste trivial.
+          </p>
+        </Cartao>
+      )}
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <Campo
           rotulo="Código"
           value={codigo}
@@ -74,7 +103,7 @@ export default function NovoProjeto() {
           required
           disabled={demo}
         />
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <Campo
             rotulo="Nome"
             value={nome}
@@ -107,6 +136,11 @@ export default function NovoProjeto() {
         onChange={(e) => setLoop(e.target.value)}
         disabled={demo}
       />
+      {loopEstourado && (
+        <p className="text-xs text-red-300">
+          {passos.length} passos — acima do teto. Corte para ≤ 3 antes de criar.
+        </p>
+      )}
       <Area
         rotulo="A alteração única"
         dica="Só UMA mudança em relação ao clone base"
@@ -133,9 +167,19 @@ export default function NovoProjeto() {
         </p>
       </Cartao>
 
-      <Botao type="submit" disabled={ocupado || demo} className="w-full">
-        {demo ? 'Bloqueado no Demo' : 'Criar projeto'}
-      </Botao>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Botao
+          type="button"
+          variante="secundario"
+          onClick={() => nav('/')}
+          className="w-full sm:w-auto"
+        >
+          Cancelar
+        </Botao>
+        <Botao type="submit" disabled={ocupado || demo || loopEstourado} className="w-full flex-1">
+          {demo ? 'Bloqueado no Demo' : 'Criar projeto'}
+        </Botao>
+      </div>
     </form>
   )
 }
