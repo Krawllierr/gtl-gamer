@@ -143,10 +143,10 @@ Pegue em [openrouter.ai/keys](https://openrouter.ai/keys). Sem esse secret a fun
 **Trocar de modelo** sem mexer no código — adicione outro secret:
 
 ```
-OPENROUTER_MODEL=google/gemini-2.5-flash
+OPENROUTER_MODEL=openai/gpt-4o
 ```
 
-Esse é o default. Custa frações de centavo por sugestão. Confira em [openrouter.ai/models](https://openrouter.ai/models) se o slug ainda existe antes de trocar — modelo aposentado devolve `404 No endpoints found`.
+Esse é o default — custa meio centavo por sugestão ($2,50/M tokens de entrada, $10/M de saída). Se quiser mais barato, `google/gemini-2.5-flash` sai por ~1/8 disso e seguiu as regras igualmente bem no teste. Confira em [openrouter.ai/models](https://openrouter.ai/models) se o slug ainda existe antes de trocar — modelo aposentado devolve `404 No endpoints found`.
 
 Redeploy da função depois de editar `supabase/functions/sugerir-projeto/index.ts`:
 
