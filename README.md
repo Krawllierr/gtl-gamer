@@ -143,10 +143,10 @@ Pegue em [openrouter.ai/keys](https://openrouter.ai/keys). Sem esse secret a fun
 **Trocar de modelo** sem mexer no código — adicione outro secret:
 
 ```
-OPENROUTER_MODEL=google/gemini-2.0-flash-001
+OPENROUTER_MODEL=google/gemini-2.5-flash
 ```
 
-Esse é o default. Custa frações de centavo por sugestão.
+Esse é o default. Custa frações de centavo por sugestão. Confira em [openrouter.ai/models](https://openrouter.ai/models) se o slug ainda existe antes de trocar — modelo aposentado devolve `404 No endpoints found`.
 
 Redeploy da função depois de editar `supabase/functions/sugerir-projeto/index.ts`:
 

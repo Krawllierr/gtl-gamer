@@ -18,7 +18,7 @@ const CORS = {
 }
 
 // Modelo barato e rápido, bom em saída estruturada. Trocável sem mexer no código.
-const MODELO = Deno.env.get('OPENROUTER_MODEL') ?? 'google/gemini-2.0-flash-001'
+const MODELO = Deno.env.get('OPENROUTER_MODEL') ?? 'google/gemini-2.5-flash'
 
 // As regras da Constituição que a sugestão precisa respeitar. Se este texto
 // divergir da CONSTITUICAO.md, a Constituição vence (Regra zero) — atualizar aqui.
