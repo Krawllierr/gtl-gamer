@@ -1,4 +1,4 @@
-# GTL Games — contexto para IA
+# GTL Gamer — contexto para IA
 
 **Leia isto antes de responder qualquer coisa neste projeto.**
 
@@ -136,12 +136,13 @@ Essa separação existe porque "ninguém clicou" e "clicaram e não voltaram" pe
 
 ## 6. Estado atual
 
-**Não confie neste bloco para dados que mudam.** O estado real vive no Supabase (projeto `GTL Games`, ref `aqkuxvfbpubktbyuoydh`): tabelas `projetos`, `ciclos`, `tarefas`, `sessoes`, `metricas`, `veredictos` e as views `v_projetos_status`, `v_esforco_relativo`, `v_portfolio`, `v_contestacoes`. **Consulte lá antes de afirmar qualquer coisa sobre progresso.**
+**Não confie neste bloco para dados que mudam.** O estado real vive no Supabase (projeto Supabase `GTL Games`, ref `aqkuxvfbpubktbyuoydh`): tabelas `projetos`, `ciclos`, `tarefas`, `sessoes`, `metricas`, `veredictos` e as views `v_projetos_status`, `v_esforco_relativo`, `v_portfolio`, `v_contestacoes`. **Consulte lá antes de afirmar qualquer coisa sobre progresso.**
 
 O que é estável:
 
-- Estúdio: **GTL Games**. Repositório: `GTL-Gamer` (Constituição, IDEAS, dashboard)
+- Estúdio: **GTL Gamer**. Repositório: `GTL-Gamer` (Constituição, IDEAS, dashboard)
 - Dashboard interno construído (Vite + React + TS + Tailwind + Supabase, deploy Docker/nginx no Easypanel)
+- **Edge Function `sugerir-projeto`** — chama o OpenRouter para sugerir definição de projeto. A chave do OpenRouter é secret do Supabase, nunca do frontend; o app chama via `supabase.functions.invoke`
 - Ciclos de **7 dias**. As tarefas de cada ciclo são criadas pela IA no Supabase; os dois executam e escrevem o `resultado`; a IA lê e monta o próximo ciclo
 - **Nenhum jogo publicado ainda.** Nenhum Robux ganho. Nenhum saque feito
 
@@ -157,7 +158,7 @@ Estes são os modos de falha observados. Evite-os ativamente.
 
 **Escrever Luau que confia no cliente.** Ver §3. Não é opcional.
 
-**Sugerir chave secreta no frontend.** No dashboard, só a `sb_publishable_`. A `sb_secret_` e a `service_role` jamais. Há uma trava no código que quebra o app de propósito se isso acontecer.
+**Sugerir chave secreta no frontend.** No dashboard, só a `sb_publishable_`. A `sb_secret_` e a `service_role` jamais — há uma trava no código que quebra o app de propósito. O mesmo vale para **qualquer chave de terceiro** (OpenRouter, etc.): vai em Edge Function ou servidor, nunca em variável `VITE_`.
 
 **Inventar fatos sobre Roblox.** Taxas de DevEx, ToS, limites de API e o painel do Supabase mudam com frequência e já mudaram desde os dados de treino. **Pesquise antes de afirmar.** Errar aqui contamina decisões de negócio.
 
