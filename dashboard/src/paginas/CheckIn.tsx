@@ -132,7 +132,9 @@ export default function CheckIn() {
             rotulo="Duração (minutos)"
             type="number"
             min={1}
-            step={5}
+            // step=1: qualquer minutagem é válida. Com step=5 o navegador recusava
+            // 30/60/90/120 — os próprios chips abaixo geravam valor inválido.
+            step={1}
             inputMode="numeric"
             value={duracao}
             onChange={(e) => setDuracao(e.target.value)}
